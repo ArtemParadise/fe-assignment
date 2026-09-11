@@ -455,7 +455,7 @@ describe("StockList", () => {
       expect(screen.queryByText("Loading stock details...")).not.toBeInTheDocument();
     });
 
-    it("should display whichever response resolves last, even if it belongs to a stock that is no longer selected (known race condition, issue #4)", async () => {
+    it("should keep showing the most recently requested stock's details when an older, slower request resolves afterward (issue #4, fixed)", async () => {
       const aapl = createDeferred();
       const nvda = createDeferred();
 
@@ -473,14 +473,17 @@ describe("StockList", () => {
       await user.click(within(cardFor("NVDA")).getByRole("button", { name: "View Details" }));
 
       // NVDA's response - the one the user actually asked for last - arrives first.
-      nvda.resolve({ ...aaplDetails, symbol: "NVDA", name: "NVDA Corporation" });
+      await nvda.resolve({ ...aaplDetails, symbol: "NVDA", name: "NVDA Corporation" });
       expect(await screen.findByText("Stock Details - NVDA")).toBeInTheDocument();
 
-      // AAPL's slower, stale response arrives afterward and silently
-      // overwrites the panel with data for a stock that isn't selected
-      // anymore.
-      aapl.resolve(aaplDetails);
-      expect(await screen.findByText("Stock Details - AAPL")).toBeInTheDocument();
+      // AAPL's slower, stale response arrives afterward and is now discarded
+      // instead of overwriting the panel with data for a stock that isn't
+      // selected anymore.
+      await aapl.resolve(aaplDetails);
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(screen.getByText("Stock Details - NVDA")).toBeInTheDocument();
+      expect(screen.queryByText("Stock Details - AAPL")).not.toBeInTheDocument();
     });
 
     it("should log the error and clear the loading indicator if fetchStockDetails rejects (known issue #17, fixed)", async () => {
@@ -574,9 +577,9 @@ describe("StockList", () => {
       expect(within(cardFor("AAPL")).getByText("Loading news...")).toBeInTheDocument();
     });
 
-    it("should stay stuck on 'Loading news...' after the response resolves, if nothing else triggers a re-render (known issue #2)", async () => {
-      // No other effect resolves in this test, so nothing re-renders
-      // StockList after the news mutation lands.
+    it("should reveal news as soon as the response resolves, even if nothing else triggers a re-render (issue #2, fixed)", async () => {
+      // No other effect resolves in this test, so the news panel can only
+      // update if setStockNews itself causes a re-render.
       fetchHistoricalPrices.mockReturnValue(new Promise(() => {}));
 
       const news = createDeferred();
@@ -593,39 +596,36 @@ describe("StockList", () => {
       await news.resolve([
         { id: 1, title: "AAPL Reports Strong Q4 Earnings", date: "2026-01-20", summary: "..." },
       ]);
-      // Flush the resolved promise's `.then` without any state update
-      // occurring that would force React to reconcile.
-      await new Promise((r) => setTimeout(r, 0));
 
-      expect(within(card).getByText("Loading news...")).toBeInTheDocument();
-      expect(screen.queryByText("AAPL Reports Strong Q4 Earnings")).not.toBeInTheDocument();
+      expect(
+        await within(card).findByText("AAPL Reports Strong Q4 Earnings"),
+      ).toBeInTheDocument();
+      expect(within(card).queryByText("Loading news...")).not.toBeInTheDocument();
     });
 
-    it("should eventually reveal news once an unrelated state update happens to re-render the list (known issue #2, timing-dependent)", async () => {
-      const news = createDeferred();
-      const prices = createDeferred();
-
-      fetchStockNews.mockReturnValue(news.promise);
-      fetchHistoricalPrices.mockReturnValue(prices.promise);
+    it("should keep a previously loaded stock's news in state after news for a different stock resolves", async () => {
+      fetchStockNews.mockImplementation((symbol) =>
+        Promise.resolve([
+          { id: 1, title: `${symbol} headline`, date: "2026-01-20", summary: "..." },
+        ]),
+      );
 
       const user = userEvent.setup();
 
       render(<StockList stocks={stocks} searchTerm="" />);
 
-      const card = cardFor("AAPL");
+      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Show News" }));
+      await within(cardFor("AAPL")).findByText("AAPL headline");
 
-      await user.click(within(card).getByRole("button", { name: "Show News" }));
-      await news.resolve([
-        { id: 1, title: "AAPL Reports Strong Q4 Earnings", date: "2026-01-20", summary: "x".repeat(100) },
-      ]);
-      await new Promise((r) => setTimeout(r, 0));
-      expect(within(card).getByText("Loading news...")).toBeInTheDocument();
+      // Make any further fetch hang, so re-expanding AAPL below can only be
+      // showing data still sitting in state from its first load, not a
+      // fresh response.
+      fetchStockNews.mockReturnValue(new Promise(() => {}));
 
-      // An unrelated historical-prices update resolves afterward, which
-      // happens to trigger the re-render that finally surfaces the news.
-      prices.resolve([{ date: "2026-01-01", price: "100.00" }]);
+      await user.click(within(cardFor("NVDA")).getByRole("button", { name: "Show News" }));
+      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Show News" }));
 
-      expect(await within(card).findByText("AAPL Reports Strong Q4 Earnings")).toBeInTheDocument();
+      expect(within(cardFor("AAPL")).getByText("AAPL headline")).toBeInTheDocument();
     });
 
     it("should show only the first 3 articles, each truncated to 80 characters with an ellipsis", async () => {
@@ -643,8 +643,6 @@ describe("StockList", () => {
       const card = cardFor("AAPL");
 
       await user.click(within(card).getByRole("button", { name: "Show News" }));
-      // Force a re-render past the stale-state bug so the resolved list is visible.
-      await user.click(within(cardFor("NVDA")).getByRole("button", { name: "☆" }));
 
       expect(await within(card).findByText("One")).toBeInTheDocument();
       expect(within(card).getByText("Two")).toBeInTheDocument();
