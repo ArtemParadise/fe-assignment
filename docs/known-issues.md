@@ -182,7 +182,14 @@ Both "View Details" and "Show News" are direct click actions, but neither click 
 
 Issues #15-20 below turned up while writing the unit test suite (`src/**/*.test.jsx`), rather than while driving the app directly. They're appended here rather than merged into the ranked list above, to avoid renumbering entries that #14 and the details panel writeup already cross-reference by number.
 
-## 15. Medium — "Hide News" never collapses the news panel
+## 15. Medium — ~~"Hide News" never collapses the news panel~~ (Fixed)
+
+**Where:** `src/components/StockList.jsx` (`loadStockNews`)
+
+**Status: Fixed.** `loadStockNews` now checks whether the clicked symbol is already the expanded one; if so it calls `setExpandedStock(null)` and returns before firing any fetch, instead of always calling `setExpandedStock(symbol)` again. Clicking "Hide News" collapses the panel and the button reverts to "Show News". Covered by `StockList.test.jsx > news panel > should collapse the panel when 'Hide News' is clicked on an already-expanded stock` and `> should not re-fetch news when collapsing an already-expanded stock`.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/components/StockList.jsx:116-118` (`loadStockNews`) and `:220-221` (the button)
 
@@ -197,6 +204,8 @@ const loadStockNews = (symbol) => {
 ```
 
 The button's label is conditional on `isExpanded`, but its `onClick` always calls `loadStockNews(stock.symbol)` — there is no branch that ever calls `setExpandedStock(null)`. Once a card's news panel is expanded, clicking "Hide News" just calls `setExpandedStock` with the *same* symbol again (a no-op state update), so the panel never closes and the button stays reading "Hide News" for the rest of the session. Covered by `src/components/StockList.test.jsx > news panel > should not collapse the panel when 'Hide News' is clicked`.
+
+</details>
 
 ## 16. Medium — "Load Price History" fetches data that is never shown anywhere
 

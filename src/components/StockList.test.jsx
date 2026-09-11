@@ -291,7 +291,7 @@ describe("StockList", () => {
     it("should render an empty star for every stock by default", () => {
       render(<StockList stocks={stocks} searchTerm="" />);
 
-      expect(screen.getAllByRole("button", { name: "☆" })).toHaveLength(3);
+      expect(screen.getAllByRole("button", { name: /^Add .* to watchlist$/ })).toHaveLength(3);
     });
 
     it("should switch a stock's star to filled when toggled on", async () => {
@@ -299,9 +299,9 @@ describe("StockList", () => {
 
       render(<StockList stocks={stocks} searchTerm="" />);
 
-      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "☆" }));
+      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Add AAPL to watchlist" }));
 
-      expect(within(cardFor("AAPL")).getByRole("button", { name: "★" })).toBeInTheDocument();
+      expect(within(cardFor("AAPL")).getByRole("button", { name: "Remove AAPL from watchlist" })).toBeInTheDocument();
     });
 
     it("should switch the star back to empty when toggled off again", async () => {
@@ -309,12 +309,13 @@ describe("StockList", () => {
 
       render(<StockList stocks={stocks} searchTerm="" />);
 
-      const star = () => within(cardFor("AAPL")).getByRole("button", { name: /[★☆]/ });
+      const star = () =>
+        within(cardFor("AAPL")).getByRole("button", { name: /watchlist$/ });
 
       await user.click(star());
       await user.click(star());
 
-      expect(within(cardFor("AAPL")).getByRole("button", { name: "☆" })).toBeInTheDocument();
+      expect(within(cardFor("AAPL")).getByRole("button", { name: "Add AAPL to watchlist" })).toBeInTheDocument();
     });
 
     it("should not affect any other stock's star", async () => {
@@ -322,10 +323,10 @@ describe("StockList", () => {
 
       render(<StockList stocks={stocks} searchTerm="" />);
 
-      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "☆" }));
+      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Add AAPL to watchlist" }));
 
-      expect(within(cardFor("TSLA")).getByRole("button", { name: "☆" })).toBeInTheDocument();
-      expect(within(cardFor("NVDA")).getByRole("button", { name: "☆" })).toBeInTheDocument();
+      expect(within(cardFor("TSLA")).getByRole("button", { name: "Add TSLA to watchlist" })).toBeInTheDocument();
+      expect(within(cardFor("NVDA")).getByRole("button", { name: "Add NVDA to watchlist" })).toBeInTheDocument();
     });
 
     it("should add a 'favorite' class to a watchlisted card", async () => {
@@ -333,7 +334,7 @@ describe("StockList", () => {
 
       render(<StockList stocks={stocks} searchTerm="" />);
 
-      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "☆" }));
+      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Add AAPL to watchlist" }));
 
       expect(cardFor("AAPL")).toHaveClass("favorite");
     });
@@ -343,7 +344,7 @@ describe("StockList", () => {
 
       render(<StockList stocks={stocks} searchTerm="" />);
 
-      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "☆" }));
+      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Add AAPL to watchlist" }));
 
       expect(within(cardFor("AAPL")).getByText("+2.30%")).toHaveStyle({
         fontWeight: "bold",
@@ -355,7 +356,7 @@ describe("StockList", () => {
 
       render(<StockList stocks={stocks} searchTerm="" />);
 
-      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "☆" }));
+      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Add AAPL to watchlist" }));
 
       expect(window.localStorage.length).toBe(0);
     });
@@ -481,18 +482,32 @@ describe("StockList", () => {
       expect(within(card).getByRole("button", { name: "Hide News" })).toBeInTheDocument();
     });
 
-    it("should not collapse the panel when 'Hide News' is clicked (existing behavior bug: it re-expands the same stock instead of toggling off)", async () => {
+    it("should collapse the panel when 'Hide News' is clicked on an already-expanded stock", async () => {
       const user = userEvent.setup();
 
       render(<StockList stocks={stocks} searchTerm="" />);
-      
+
       const card = cardFor("AAPL");
 
       await user.click(within(card).getByRole("button", { name: "Show News" }));
       await user.click(within(card).getByRole("button", { name: "Hide News" }));
 
-      expect(within(card).getByRole("button", { name: "Hide News" })).toBeInTheDocument();
-      expect(within(card).getByText("Loading news...")).toBeInTheDocument();
+      expect(within(card).getByRole("button", { name: "Show News" })).toBeInTheDocument();
+      expect(within(card).queryByText("Loading news...")).not.toBeInTheDocument();
+    });
+
+    it("should not re-fetch news when collapsing an already-expanded stock", async () => {
+      const user = userEvent.setup();
+
+      render(<StockList stocks={stocks} searchTerm="" />);
+
+      const card = cardFor("AAPL");
+
+      await user.click(within(card).getByRole("button", { name: "Show News" }));
+      fetchStockNews.mockClear();
+      await user.click(within(card).getByRole("button", { name: "Hide News" }));
+
+      expect(fetchStockNews).not.toHaveBeenCalled();
     });
 
     it("should request news for the clicked stock's symbol", async () => {
