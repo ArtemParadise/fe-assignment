@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 
 import { generateStockData } from "../utils/mockStockApi";
 
@@ -8,6 +8,7 @@ function SearchBar({ onSearch, placeholder }) {
 
   const handleChange = (e) => {
     const newValue = e.target.value;
+
     setValue(newValue);
     onSearch(newValue);
 
@@ -43,14 +44,16 @@ function SearchBar({ onSearch, placeholder }) {
       {suggestions.length > 0 && (
         <ul className="suggestions">
           {suggestions.map((item, idx) => (
-            <li
-              key={idx}
-              onClick={() => {
-                setValue(item.name);
-                onSearch(item.name);
-              }}
-            >
-              {item.name}
+            <li key={idx}>
+              <button
+                type="button"
+                onClick={() => {
+                  setValue(item.name);
+                  onSearch(item.name);
+                }}
+              >
+                {item.name}
+              </button>
             </li>
           ))}
         </ul>

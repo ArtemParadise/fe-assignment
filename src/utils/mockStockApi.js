@@ -1,6 +1,4 @@
 // Mock stock market data generator
-let stockCache = {};
-
 export const generateStockData = () => {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -115,6 +113,7 @@ export const fetchStockDetails = (symbol) => {
   return new Promise((resolve) => {
     // Random delay simulates unpredictable API
     const delay = Math.random() * 2000 + 500;
+
     setTimeout(() => {
       resolve({
         symbol: symbol,
@@ -166,10 +165,11 @@ export const fetchStockNews = (symbol) => {
 };
 
 // Simulated API for historical data
-export const fetchHistoricalPrices = (symbol) => {
+export const fetchHistoricalPrices = (_symbol) => {
   return new Promise((resolve) => {
     setTimeout(() => {
       const data = [];
+
       for (let i = 30; i >= 0; i--) {
         data.push({
           date: new Date(Date.now() - i * 24 * 60 * 60 * 1000)
@@ -178,6 +178,7 @@ export const fetchHistoricalPrices = (symbol) => {
           price: (Math.random() * 100 + 150).toFixed(2),
         });
       }
+
       resolve(data);
     }, 800);
   });

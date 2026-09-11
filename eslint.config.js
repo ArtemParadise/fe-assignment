@@ -74,6 +74,7 @@ export default [
         "warn",
         { blankLine: "always", prev: "*", next: "return" },
         { blankLine: "always", prev: ["const", "let", "var"], next: "*" },
+        { blankLine: "always", prev: "*", next: ["const", "let", "var"] },
         {
           blankLine: "any",
           prev: ["const", "let", "var"],

@@ -1,8 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import SearchBar from "./SearchBar";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import { generateStockData } from "../utils/mockStockApi";
+
+import SearchBar from "./SearchBar";
+
 
 // Baseline for the upcoming refactor: locks down SearchBar's current,
 // observable behavior (including its existing quirks) so a regression can
@@ -31,6 +34,7 @@ describe("SearchBar", () => {
     render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
 
     const input = getInput();
+
     expect(input).toBeInTheDocument();
     expect(input).toHaveAttribute("type", "text");
     expect(input).toHaveValue("");
@@ -45,6 +49,7 @@ describe("SearchBar", () => {
   it("should call onSearch synchronously on every keystroke", async () => {
     const user = userEvent.setup();
     const onSearch = vi.fn();
+
     render(<SearchBar onSearch={onSearch} placeholder="Search stocks..." />);
 
     await user.type(getInput(), "am");
@@ -56,6 +61,7 @@ describe("SearchBar", () => {
 
   it("should update the input's own value as the user types", async () => {
     const user = userEvent.setup();
+
     render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
 
     await user.type(getInput(), "amaz");
@@ -66,6 +72,7 @@ describe("SearchBar", () => {
   it("should call onSearch with an empty string once the input is cleared", async () => {
     const user = userEvent.setup();
     const onSearch = vi.fn();
+
     render(<SearchBar onSearch={onSearch} placeholder="Search stocks..." />);
 
     await user.type(getInput(), "am");
@@ -76,6 +83,7 @@ describe("SearchBar", () => {
 
   it("should not fetch suggestions while the query is 2 characters or fewer", async () => {
     const user = userEvent.setup();
+
     render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
 
     await user.type(getInput(), "am");
@@ -86,6 +94,7 @@ describe("SearchBar", () => {
 
   it("should fetch and render matching suggestions once the query exceeds 2 characters", async () => {
     const user = userEvent.setup();
+
     render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
 
     await user.type(getInput(), "ama");
@@ -97,6 +106,7 @@ describe("SearchBar", () => {
 
   it("should match suggestions case-insensitively against the company name", async () => {
     const user = userEvent.setup();
+
     render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
 
     await user.type(getInput(), "AMA");
@@ -106,6 +116,7 @@ describe("SearchBar", () => {
 
   it("should match suggestions only against the company name, not the ticker symbol (existing behavior)", async () => {
     const user = userEvent.setup();
+
     render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
 
     // "aaaa" is Amazing Company's symbol (AAAA), but is not a substring of
@@ -118,6 +129,7 @@ describe("SearchBar", () => {
 
   it("should re-fetch suggestions on every keystroke past the threshold, once per keystroke (existing behavior, duplicates App's own fetch)", async () => {
     const user = userEvent.setup();
+
     render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
 
     await user.type(getInput(), "amazi");
@@ -131,7 +143,9 @@ describe("SearchBar", () => {
       { id: 1, symbol: "AAPL", name: "Apple Inc." },
       { id: 2, symbol: "AMZN", name: "Amazon.com Inc." },
     ]);
+
     const user = userEvent.setup();
+
     render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
 
     await user.type(getInput(), "inc");
@@ -142,10 +156,13 @@ describe("SearchBar", () => {
   it("should fill the input and report the suggestion through onSearch when clicked", async () => {
     const user = userEvent.setup();
     const onSearch = vi.fn();
+
     render(<SearchBar onSearch={onSearch} placeholder="Search stocks..." />);
 
     await user.type(getInput(), "ama");
+
     const suggestion = await screen.findByText("Amazing Company");
+
     await user.click(suggestion);
 
     expect(getInput()).toHaveValue("Amazing Company");
@@ -154,10 +171,13 @@ describe("SearchBar", () => {
 
   it("should leave the suggestions list open after a suggestion is clicked (existing behavior)", async () => {
     const user = userEvent.setup();
+
     render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
 
     await user.type(getInput(), "ama");
+
     const suggestion = await screen.findByText("Amazing Company");
+
     await user.click(suggestion);
 
     expect(screen.getByText("Amazing Company")).toBeInTheDocument();
@@ -165,6 +185,7 @@ describe("SearchBar", () => {
 
   it("should keep showing the last suggestions after the query is cleared, instead of hiding them (existing behavior)", async () => {
     const user = userEvent.setup();
+
     render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
 
     await user.type(getInput(), "ama");
