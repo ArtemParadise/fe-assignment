@@ -1,5 +1,5 @@
 import { renderHook, act } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { useStockSort } from "./useStockSort";
 
@@ -96,10 +96,16 @@ describe("useStockSort", () => {
   });
 
   it("should throw when sorting by average price before every stock's metrics have loaded (known critical bug #1)", () => {
+    // React logs this render-phase error to console.error since nothing
+    // here catches it with an error boundary; silence that expected noise.
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
     const { result } = renderHook(() => useStockSort(stocks, {}));
 
     expect(() => act(() => result.current.handleSort("metrics"))).toThrow(
       /reading 'avgPrice'/,
     );
+
+    errorSpy.mockRestore();
   });
 });

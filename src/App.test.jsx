@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import App from "./App";
@@ -34,26 +34,39 @@ const stocks = [
   { id: 5, symbol: "TSLA", name: "Tesla Inc." },
 ];
 
+// App fetches stock data on mount, and that mocked promise resolves on a
+// later microtask than a synchronous test body. Flushing it under act()
+// here keeps that resulting setState from being reported as an unwrapped
+// update in tests that don't otherwise await the fetch.
+async function flushGenerateStockData() {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
 describe("App", () => {
   beforeEach(() => {
     generateStockData.mockReset().mockResolvedValue(stocks);
   });
 
-  it("should render the dashboard heading", () => {
+  it("should render the dashboard heading", async () => {
     render(<App />);
+    await flushGenerateStockData();
 
     expect(
       screen.getByRole("heading", { name: "Stock Trading Dashboard" }),
     ).toBeInTheDocument();
   });
 
-  it("should render SearchBar with the dashboard's search placeholder", () => {
+  it("should render SearchBar with the dashboard's search placeholder", async () => {
     render(<App />);
+    await flushGenerateStockData();
 
     expect(screen.getByPlaceholderText("Search stocks...")).toBeInTheDocument();
   });
 
   it("should pass an empty stock list to StockList before the fetch resolves", () => {
+    generateStockData.mockReturnValue(new Promise(() => {}));
     render(<App />);
 
     expect(screen.getByText("stocks:0")).toBeInTheDocument();
