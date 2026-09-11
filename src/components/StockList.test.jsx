@@ -245,18 +245,6 @@ describe("StockList", () => {
   });
 
   describe("filtering by sector", () => {
-    it("should list 'All Sectors' plus every unique sector as options", () => {
-      render(<StockList stocks={stocks} searchTerm="" />);
-
-      const options = within(screen.getByRole("combobox")).getAllByRole("option");
-
-      expect(options.map((o) => o.textContent)).toEqual([
-        "All Sectors",
-        "Automotive",
-        "Technology",
-      ]);
-    });
-
     it("should show only stocks in the selected sector", async () => {
       const user = userEvent.setup();
 

@@ -7,6 +7,7 @@ import {
 } from "../utils/mockStockApi";
 
 import StockCard from "./StockCard";
+import StockControls from "./StockControls";
 
 function StockList({ stocks, searchTerm }) {
   const [stockDetails, setStockDetails] = useState(null);
@@ -125,46 +126,14 @@ function StockList({ stocks, searchTerm }) {
     <div className="user-list">
       <h2>Stocks ({sortedStocks.length})</h2>
 
-      <div className="controls">
-        <div className="sort-controls">
-          <span>Sort by: </span>
-          <button onClick={() => handleSort("symbol")}>
-            Symbol {sortBy === "symbol" && (sortOrder === "asc" ? "↑" : "↓")}
-          </button>
-          <button onClick={() => handleSort("price")}>
-            Price {sortBy === "price" && (sortOrder === "asc" ? "↑" : "↓")}
-          </button>
-          <button onClick={() => handleSort("change")}>
-            Change {sortBy === "change" && (sortOrder === "asc" ? "↑" : "↓")}
-          </button>
-          <button onClick={() => handleSort("volume")}>
-            Volume {sortBy === "volume" && (sortOrder === "asc" ? "↑" : "↓")}
-          </button>
-          <button onClick={() => handleSort("sector")}>
-            Sector {sortBy === "sector" && (sortOrder === "asc" ? "↑" : "↓")}
-          </button>
-          <button onClick={() => handleSort("metrics")}>
-            Avg Price{" "}
-            {sortBy === "metrics" && (sortOrder === "asc" ? "↑" : "↓")}
-          </button>
-        </div>
-
-        <div className="filter-controls">
-          <label htmlFor="sector-filter">Filter by sector: </label>
-          <select
-            id="sector-filter"
-            value={filterBySector}
-            onChange={(e) => setFilterBySector(e.target.value)}
-          >
-            <option value="">All Sectors</option>
-            {uniqueSectors.map((sector) => (
-              <option key={sector} value={sector}>
-                {sector}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      <StockControls
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={handleSort}
+        sectors={uniqueSectors}
+        filterBySector={filterBySector}
+        onFilterBySectorChange={setFilterBySector}
+      />
 
       <div className="user-grid">
         {sortedStocks.map((stock, index) => (
