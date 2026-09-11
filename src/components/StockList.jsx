@@ -144,19 +144,20 @@ function StockList({ stocks, searchTerm }) {
         onFilterBySectorChange={setFilterBySector}
       />
 
-      <div className="user-grid">
-        {sortedStocks.map((stock, index) => (
-          <StockCard
-            key={index}
-            stock={stock}
-            isWatchlisted={watchlist.includes(stock.id)}
-            avgPrice={stockMetrics[stock.id]?.avgPrice}
-            news={stockNews[stock.symbol] || []}
-            isExpanded={expandedStock === stock.symbol}
-            onToggleWatchlist={() => toggleWatchlist(stock.id)}
-            onViewDetails={() => viewStockDetails(stock.symbol)}
-            onToggleNews={() => loadStockNews(stock.symbol)}
-          />
+      <div className="user-grid" role="list" aria-label="Stocks grid">
+        {sortedStocks.map((stock) => (
+          <div role="listitem" key={stock.id}>
+            <StockCard
+              stock={stock}
+              isWatchlisted={watchlist.includes(stock.id)}
+              avgPrice={stockMetrics[stock.id]?.avgPrice}
+              news={stockNews[stock.symbol] || []}
+              isExpanded={expandedStock === stock.symbol}
+              onToggleWatchlist={() => toggleWatchlist(stock.id)}
+              onViewDetails={() => viewStockDetails(stock.symbol)}
+              onToggleNews={() => loadStockNews(stock.symbol)}
+            />
+          </div>
         ))}
       </div>
 
