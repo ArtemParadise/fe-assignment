@@ -49,6 +49,13 @@ describe("useStockFilters", () => {
     expect(symbols(result.current.visibleStocks)).toHaveLength(3);
   });
 
+  it("should return no stocks and no sectors when the stock list is empty", () => {
+    const { result } = renderHook(() => useStockFilters([], ""));
+
+    expect(result.current.visibleStocks).toEqual([]);
+    expect(result.current.uniqueSectors).toEqual([]);
+  });
+
   it("should filter by symbol, case-insensitively", () => {
     const { result } = renderHook(() => useStockFilters(stocks, "aapl"));
 
