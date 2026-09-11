@@ -30,7 +30,14 @@ There is no error boundary anywhere in the tree (`App` or `StockList`), so React
 
 ![Blank page after the crash](./assets/avgprice-sort-crash.png)
 
-## 2. High — News panel can get permanently stuck on "Loading news…"
+## 2. High — ~~News panel can get permanently stuck on "Loading news…"~~ (Fixed)
+
+**Where:** `src/components/StockList.jsx` (`loadStockNews`)
+
+**Status: Fixed.** `setStockNews` now builds a new object (`setStockNews((prev) => ({ ...prev, [symbol]: news }))`) instead of mutating and re-setting the same reference, so the news panel reliably re-renders as soon as the response resolves, regardless of whether any other state update happens to fire afterward. Covered by `StockList.test.jsx > news panel > should reveal news as soon as the response resolves, even if nothing else triggers a re-render (issue #2, fixed)` and `> should keep a previously loaded stock's news in state after news for a different stock resolves`.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/components/StockList.jsx:34-41`
 
@@ -51,7 +58,9 @@ This mutates the existing `stockNews` object in place, then calls `setStockNews`
 - Clicked "Show News" in isolation (no other pending state updates): the card stayed on "Loading news..." indefinitely — the data had actually arrived (confirmed the object was mutated) but nothing triggered a re-render to display it.
 - Clicked "Show News" while the unrelated `stockMetrics` effect (see issue #4) was still mid-flight, resolving stocks one by one: the news content *did* appear, because one of those unrelated `setStockMetrics` updates happened to trigger a re-render after the mutation had already landed.
 
-So the panel's reliability depends entirely on whether some *other* state update happens to fire afterward — it's not deterministic from the user's perspective.
+So the panel's reliability depended entirely on whether some *other* state update happened to fire afterward — it wasn't deterministic from the user's perspective.
+
+</details>
 
 ## 3. High — Watchlist does not persist, despite being documented as doing so
 
@@ -63,7 +72,14 @@ The root [`README.md`](../README.md) lists "Watchlist functionality with localSt
 
 The feature (the star toggle itself, and its visual highlight) works as in-memory UI state; only the persistence half described in the docs is absent.
 
-## 4. Medium — `fetchStockDetails` responses can arrive out of order (no request cancellation)
+## 4. Medium — ~~`fetchStockDetails` responses can arrive out of order (no request cancellation)~~ (Fixed)
+
+**Where:** `src/components/StockList.jsx` (`viewStockDetails`)
+
+**Status: Fixed.** A `latestDetailsRequest` ref now records the symbol of the most recently clicked "View Details" request; both the resolve and the `finally` handler check that the response they're processing still matches `latestDetailsRequest.current` before calling `setStockDetails`/`setLoading(false)`. A stale, slower response for a stock that's no longer selected is now discarded instead of overwriting the panel. Covered by `StockList.test.jsx > stock details > should keep showing the most recently requested stock's details when an older, slower request resolves afterward (issue #4, fixed)`.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/components/StockList.jsx:20-32`, and the delay itself is described in `src/utils/mockStockApi.js:113-118`:
 
@@ -75,7 +91,9 @@ export const fetchStockDetails = (symbol) => {
     ...
 ```
 
-Every click on "View Details" starts a new `fetchStockDetails` call; the effect doesn't track or cancel the previous in-flight request. Because each response is delayed by a random 500–2500ms, clicking stock A and then quickly clicking stock B can result in A's slower response resolving *after* B's and overwriting the panel — so the panel can end up showing details for a stock other than the one currently selected. (The source comment above calls this out explicitly as intentional.)
+Every click on "View Details" started a new `fetchStockDetails` call; the effect didn't track or cancel the previous in-flight request. Because each response is delayed by a random 500–2500ms, clicking stock A and then quickly clicking stock B could result in A's slower response resolving *after* B's and overwriting the panel — so the panel could end up showing details for a stock other than the one currently selected. (The source comment above calls this out explicitly as intentional.)
+
+</details>
 
 ## 5. Medium — Details panel values are unrelated to the summary card for the same symbol
 
