@@ -483,7 +483,7 @@ describe("StockList", () => {
       expect(await screen.findByText("Stock Details - AAPL")).toBeInTheDocument();
     });
 
-    it("should log the error and leave the loading indicator stuck if fetchStockDetails rejects (known issue #17)", async () => {
+    it("should log the error and clear the loading indicator if fetchStockDetails rejects (known issue #17, fixed)", async () => {
       const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
       const error = new Error("network down");
 
@@ -496,7 +496,7 @@ describe("StockList", () => {
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "View Details" }));
 
       await waitFor(() => expect(logSpy).toHaveBeenCalledWith(error));
-      expect(screen.getByText("Loading stock details...")).toBeInTheDocument();
+      expect(screen.queryByText("Loading stock details...")).not.toBeInTheDocument();
 
       logSpy.mockRestore();
     });

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+
 import {
   fetchStockDetails,
   fetchStockNews,
@@ -6,7 +7,6 @@ import {
 } from "../utils/mockStockApi";
 
 function StockList({ stocks, searchTerm }) {
-  const [selectedStock, setSelectedStock] = useState(null);
   const [stockDetails, setStockDetails] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState("symbol");
@@ -16,29 +16,6 @@ function StockList({ stocks, searchTerm }) {
   const [expandedStock, setExpandedStock] = useState(null);
   const [filterBySector, setFilterBySector] = useState("");
   const [stockMetrics, setStockMetrics] = useState({});
-
-  useEffect(() => {
-    if (selectedStock) {
-      setLoading(true);
-      fetchStockDetails(selectedStock)
-        .then((data) => {
-          setStockDetails(data);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-    }
-  }, [selectedStock]);
-
-  useEffect(() => {
-    if (expandedStock) {
-      fetchStockNews(expandedStock).then((news) => {
-        stockNews[expandedStock] = news;
-        setStockNews(stockNews);
-      });
-    }
-  }, [expandedStock]);
 
   useEffect(() => {
     stocks.forEach((stock) => {
@@ -75,6 +52,7 @@ function StockList({ stocks, searchTerm }) {
       } else if (sortBy === "metrics") {
         const aMetric = stockMetrics[a.id].avgPrice;
         const bMetric = stockMetrics[b.id].avgPrice;
+
         comparison = aMetric - bMetric;
       }
 
@@ -115,6 +93,25 @@ function StockList({ stocks, searchTerm }) {
 
   const loadStockNews = (symbol) => {
     setExpandedStock(symbol);
+    fetchStockNews(symbol).then((news) => {
+      stockNews[symbol] = news;
+      setStockNews(stockNews);
+    });
+  };
+
+  const viewStockDetails = (symbol) => {
+    setLoading(true);
+    fetchStockDetails(symbol)
+      .then((data) => {
+        setStockDetails(data);
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console -- known issue #17 (docs/known-issues.md, fixed): error is only logged to the console, never surfaced to the user; not fixing app bugs in this eslint cleanup
+        console.log(err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   return (
@@ -123,7 +120,7 @@ function StockList({ stocks, searchTerm }) {
 
       <div className="controls">
         <div className="sort-controls">
-          <label>Sort by: </label>
+          <span>Sort by: </span>
           <button onClick={() => handleSort("symbol")}>
             Symbol {sortBy === "symbol" && (sortOrder === "asc" ? "↑" : "↓")}
           </button>
@@ -146,14 +143,17 @@ function StockList({ stocks, searchTerm }) {
         </div>
 
         <div className="filter-controls">
-          <label>Filter by sector: </label>
+          <label htmlFor="sector-filter">Filter by sector: </label>
           <select
+            id="sector-filter"
             value={filterBySector}
             onChange={(e) => setFilterBySector(e.target.value)}
           >
             <option value="">All Sectors</option>
             {uniqueSectors.map((sector) => (
-              <option value={sector}>{sector}</option>
+              <option key={sector} value={sector}>
+                {sector}
+              </option>
             ))}
           </select>
         </div>
@@ -214,7 +214,7 @@ function StockList({ stocks, searchTerm }) {
               </div>
 
               <div className="user-actions">
-                <button onClick={() => setSelectedStock(stock.symbol)}>
+                <button onClick={() => viewStockDetails(stock.symbol)}>
                   View Details
                 </button>
                 <button onClick={() => loadStockNews(stock.symbol)}>
@@ -268,6 +268,7 @@ function StockList({ stocks, searchTerm }) {
           <button
             onClick={() => {
               fetchHistoricalPrices(stockDetails.symbol).then((prices) => {
+                // eslint-disable-next-line no-console -- known issue #16 (docs/known-issues.md): result is only logged, never rendered; not fixing app bugs in this eslint cleanup
                 console.log("Historical prices:", prices);
                 // TODO
               });
