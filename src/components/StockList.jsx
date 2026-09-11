@@ -6,6 +6,8 @@ import {
   fetchHistoricalPrices,
 } from "../utils/mockStockApi";
 
+import StockCard from "./StockCard";
+
 function StockList({ stocks, searchTerm }) {
   const [stockDetails, setStockDetails] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -165,88 +167,19 @@ function StockList({ stocks, searchTerm }) {
       </div>
 
       <div className="user-grid">
-        {sortedStocks.map((stock, index) => {
-          const isWatchlisted = watchlist.includes(stock.id);
-          const news = stockNews[stock.symbol] || [];
-          const isExpanded = expandedStock === stock.symbol;
-          const priceChange = stock.change;
-          const isPositive = priceChange >= 0;
-
-          return (
-            <div
-              key={index}
-              className={`user-card ${isWatchlisted ? "favorite" : ""}`}
-            >
-              <div className="user-card-header">
-                <h3>{stock.symbol}</h3>
-                <button
-                  className="fav-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleWatchlist(stock.id);
-                  }}
-                >
-                  {isWatchlisted ? "★" : "☆"}
-                </button>
-              </div>
-
-              <p className="stock-name">{stock.name}</p>
-
-              <div className="stock-price">
-                <span style={{ fontSize: "24px", fontWeight: "bold" }}>
-                  ${stock.price.toFixed(2)}
-                </span>
-                <span
-                  style={{
-                    color: isPositive ? "green" : "red",
-                    fontWeight: isWatchlisted ? "bold" : "normal",
-                    marginLeft: "10px",
-                  }}
-                >
-                  {isPositive ? "+" : ""}
-                  {priceChange.toFixed(2)}%
-                </span>
-              </div>
-
-              <p className="stock-sector">{stock.sector}</p>
-
-              <div className="user-stats">
-                <small>Volume: {(stock.volume / 1000000).toFixed(1)}M</small>
-                <small>
-                  Avg:{" "}
-                  {stockMetrics[stock.id]?.avgPrice?.toFixed(2) || "Loading..."}
-                </small>
-              </div>
-
-              <div className="user-actions">
-                <button onClick={() => viewStockDetails(stock.symbol)}>
-                  View Details
-                </button>
-                <button onClick={() => loadStockNews(stock.symbol)}>
-                  {isExpanded ? "Hide News" : "Show News"}
-                </button>
-              </div>
-
-              {isExpanded && (
-                <div className="user-posts">
-                  {news.length === 0 ? (
-                    <p>Loading news...</p>
-                  ) : (
-                    <ul>
-                      {news.slice(0, 3).map((article) => (
-                        <li key={article.id}>
-                          <strong>{article.title}</strong>
-                          <small>{article.date}</small>
-                          <p>{article.summary.substring(0, 80)}...</p>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {sortedStocks.map((stock, index) => (
+          <StockCard
+            key={index}
+            stock={stock}
+            isWatchlisted={watchlist.includes(stock.id)}
+            avgPrice={stockMetrics[stock.id]?.avgPrice}
+            news={stockNews[stock.symbol] || []}
+            isExpanded={expandedStock === stock.symbol}
+            onToggleWatchlist={() => toggleWatchlist(stock.id)}
+            onViewDetails={() => viewStockDetails(stock.symbol)}
+            onToggleNews={() => loadStockNews(stock.symbol)}
+          />
+        ))}
       </div>
 
       {loading && <div>Loading stock details...</div>}

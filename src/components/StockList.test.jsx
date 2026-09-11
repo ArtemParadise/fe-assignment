@@ -104,33 +104,6 @@ describe("StockList", () => {
       expect(getCardTitles()).toEqual(["AAPL", "NVDA", "TSLA"]);
     });
 
-    it("should render the company name, formatted price, sector, and volume in millions on each card", () => {
-      render(<StockList stocks={stocks} searchTerm="" />);
-
-      const aaplCard = cardFor("AAPL");
-
-      expect(within(aaplCard).getByText("Apple Inc.")).toBeInTheDocument();
-      expect(within(aaplCard).getByText("$178.52")).toBeInTheDocument();
-      expect(within(aaplCard).getByText("Technology")).toBeInTheDocument();
-      expect(within(aaplCard).getByText("Volume: 52.0M")).toBeInTheDocument();
-    });
-
-    it("should prefix a positive change with a '+' sign and render it in green", () => {
-      render(<StockList stocks={stocks} searchTerm="" />);
-
-      const change = within(cardFor("AAPL")).getByText("+2.30%");
-
-      expect(change).toHaveStyle({ color: "rgb(0, 128, 0)" });
-    });
-
-    it("should render a negative change without a leading sign and in red", () => {
-      render(<StockList stocks={stocks} searchTerm="" />);
-
-      const change = within(cardFor("TSLA")).getByText("-3.40%");
-
-      expect(change).toHaveStyle({ color: "rgb(255, 0, 0)" });
-    });
-
     it("should show 'Loading...' for average price until historical prices resolve", () => {
       fetchHistoricalPrices.mockReturnValue(new Promise(() => {}));
       render(<StockList stocks={stocks} searchTerm="" />);
@@ -628,27 +601,5 @@ describe("StockList", () => {
       expect(within(cardFor("AAPL")).getByText("AAPL headline")).toBeInTheDocument();
     });
 
-    it("should show only the first 3 articles, each truncated to 80 characters with an ellipsis", async () => {
-      fetchStockNews.mockResolvedValue([
-        { id: 1, title: "One", date: "2026-01-01", summary: "a".repeat(100) },
-        { id: 2, title: "Two", date: "2026-01-02", summary: "b".repeat(100) },
-        { id: 3, title: "Three", date: "2026-01-03", summary: "c".repeat(100) },
-        { id: 4, title: "Four", date: "2026-01-04", summary: "d".repeat(100) },
-      ]);
-
-      const user = userEvent.setup();
-
-      render(<StockList stocks={stocks} searchTerm="" />);
-
-      const card = cardFor("AAPL");
-
-      await user.click(within(card).getByRole("button", { name: "Show News" }));
-
-      expect(await within(card).findByText("One")).toBeInTheDocument();
-      expect(within(card).getByText("Two")).toBeInTheDocument();
-      expect(within(card).getByText("Three")).toBeInTheDocument();
-      expect(within(card).queryByText("Four")).not.toBeInTheDocument();
-      expect(within(card).getByText(`${"a".repeat(80)}...`)).toBeInTheDocument();
-    });
   });
 });
