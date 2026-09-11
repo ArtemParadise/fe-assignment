@@ -97,6 +97,12 @@ function StockList({ stocks, searchTerm }) {
   };
 
   const loadStockNews = (symbol) => {
+    if (expandedStock === symbol) {
+      setExpandedStock(null);
+
+      return;
+    }
+
     setExpandedStock(symbol);
     fetchStockNews(symbol).then((news) => {
       setStockNews((prev) => ({ ...prev, [symbol]: news }));
