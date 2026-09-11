@@ -79,6 +79,47 @@ describe("useStockDetails", () => {
     expect(result.current.stockDetails.symbol).toBe("NVDA");
   });
 
+  it("should discard a stale response that shares its symbol with the latest request (AAPL -> NVDA -> AAPL)", async () => {
+    const aapl1 = createDeferred();
+    const nvda = createDeferred();
+    const aapl2 = createDeferred();
+    const aaplCalls = [aapl1, aapl2];
+
+    fetchStockDetails.mockImplementation((symbol) =>
+      symbol === "AAPL" ? aaplCalls.shift().promise : nvda.promise,
+    );
+
+    const { result } = renderHook(() => useStockDetails());
+
+    act(() => result.current.viewStockDetails("AAPL"));
+    act(() => result.current.viewStockDetails("NVDA"));
+    act(() => result.current.viewStockDetails("AAPL"));
+
+    expect(result.current.loading).toBe(true);
+
+    // The first, now-stale AAPL request resolves after the third request
+    // (also AAPL) was issued. Since it shares its symbol with the latest
+    // request, a symbol-based staleness check would wrongly accept it.
+    aapl1.resolve({ ...aaplDetails, price: "1.00" });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(result.current.stockDetails).toBeNull();
+    expect(result.current.loading).toBe(true);
+
+    nvda.resolve({ ...aaplDetails, symbol: "NVDA" });
+    await new Promise((r) => setTimeout(r, 0));
+
+    // The stale NVDA-slot response must not overwrite state meant for the
+    // still-pending latest (second AAPL) request either.
+    expect(result.current.stockDetails).toBeNull();
+    expect(result.current.loading).toBe(true);
+
+    aapl2.resolve({ ...aaplDetails, price: "200.00" });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.stockDetails).toEqual({ ...aaplDetails, price: "200.00" });
+  });
+
   it("should log the error and clear loading if fetchStockDetails rejects (issue #17, fixed)", async () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const error = new Error("network down");

@@ -23,7 +23,7 @@ Independently of the main grid filtering, once the query is longer than 2 charac
 
 Six sort keys are available as buttons: Symbol, Price, Change, Volume, Sector, Avg Price. Clicking a key sorts ascending; clicking the same key again flips to descending (indicated by an arrow, e.g. "Symbol ↑" / "Symbol ↓"). Verified: clicking **Price** produces `$142.65 → $165.43 → $178.25 → $178.52 → $185.67 → $238.45 → $278.92 → $412.78 → $485.30 → $875.28`, i.e. correct ascending numeric order.
 
-**Sorting by "Avg Price" before the per-stock averages have finished loading crashes the app.** See [known-issues.md](./known-issues.md#1-critical--sorting-by-avg-price-before-data-loads-crashes-the-app) for the reproduction and evidence.
+**Sorting by "Avg Price" before the per-stock averages have finished loading used to crash the app; this is now fixed** — stocks whose average hasn't loaded yet sort to the end of the list instead. See [known-issues.md](./known-issues.md) (issue #1) for the original reproduction and the fix.
 
 ## 4. Sector filter
 

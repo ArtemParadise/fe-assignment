@@ -29,10 +29,21 @@ export function useStockSort(stocks, stockMetrics) {
     } else if (sortBy === "volume") {
       comparison = a.volume - b.volume;
     } else if (sortBy === "metrics") {
-      const aMetric = stockMetrics[a.id].avgPrice;
-      const bMetric = stockMetrics[b.id].avgPrice;
+      const aMetric = stockMetrics[a.id]?.avgPrice;
+      const bMetric = stockMetrics[b.id]?.avgPrice;
+      const aMissing = aMetric === undefined;
+      const bMissing = bMetric === undefined;
 
-      comparison = aMetric - bMetric;
+      if (aMissing || bMissing) {
+        // Stocks whose metrics haven't loaded yet always sort to the
+        // bottom, regardless of the current sort direction (pre-negate
+        // so the asc/desc flip below cancels out).
+        const missingComparison = aMissing && bMissing ? 0 : aMissing ? 1 : -1;
+
+        comparison = sortOrder === "asc" ? missingComparison : -missingComparison;
+      } else {
+        comparison = aMetric - bMetric;
+      }
     }
 
     return sortOrder === "asc" ? comparison : -comparison;
