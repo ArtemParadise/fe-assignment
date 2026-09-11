@@ -108,9 +108,9 @@ describe("SearchBar", () => {
     const user = userEvent.setup();
     render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
 
-    // "zzzz" is Amazing Company's symbol, not part of its name, and matches
-    // no other field - so today it produces zero suggestions.
-    await user.type(getInput(), "zzzz");
+    // "aaaa" is Amazing Company's symbol (AAAA), but is not a substring of
+    // its name "Amazing Company" - so today it produces zero suggestions.
+    await user.type(getInput(), "aaaa");
     await waitFor(() => expect(generateStockData).toHaveBeenCalled());
 
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
