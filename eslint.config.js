@@ -79,6 +79,16 @@ export default [
           prev: ["const", "let", "var"],
           next: ["const", "let", "var"],
         },
+        {
+          blankLine: "always",
+          prev: "*",
+          next: ["multiline-const", "multiline-let", "multiline-var"],
+        },
+        {
+          blankLine: "always",
+          prev: ["multiline-const", "multiline-let", "multiline-var"],
+          next: "*",
+        },
         { blankLine: "always", prev: "*", next: ["function", "class"] },
         { blankLine: "always", prev: ["function", "class"], next: "*" },
         {
