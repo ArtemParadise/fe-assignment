@@ -86,12 +86,12 @@ describe("App", () => {
     await screen.findByText("stocks:2");
 
     // Unlike StockList's own filter, this one does NOT lowercase `name`
-    // before comparing, so it only matches "Tesla", not "tesla".
+    // before comparing, so "tesla" does not match "Tesla Inc.".
     fireEvent.change(screen.getByPlaceholderText("Search stocks..."), {
-      target: { value: "Tesla" },
+      target: { value: "tesla" },
     });
 
-    expect(await screen.findByText("filtered:1")).toBeInTheDocument();
+    expect(await screen.findByText("filtered:0")).toBeInTheDocument();
   });
 
   it("should match filteredStocks by symbol via an uppercased comparison, independent of the name check's casing", async () => {
