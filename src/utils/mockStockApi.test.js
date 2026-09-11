@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
 import {
   generateStockData,
   fetchStockDetails,
@@ -23,6 +24,7 @@ describe("mockStockApi", () => {
   describe("generateStockData", () => {
     it("should resolve after a 500ms delay", async () => {
       const onResolve = vi.fn();
+
       generateStockData().then(onResolve);
 
       await vi.advanceTimersByTimeAsync(499);
@@ -34,7 +36,9 @@ describe("mockStockApi", () => {
 
     it("should resolve with exactly the current 10-stock dataset", async () => {
       const promise = generateStockData();
+
       await vi.advanceTimersByTimeAsync(500);
+
       const stocks = await promise;
 
       expect(stocks).toEqual([
@@ -143,7 +147,9 @@ describe("mockStockApi", () => {
 
     it("should resolve with the exact known field values for AAPL", async () => {
       const promise = generateStockData();
+
       await vi.advanceTimersByTimeAsync(500);
+
       const stocks = await promise;
 
       expect(stocks[0]).toEqual({
@@ -160,11 +166,14 @@ describe("mockStockApi", () => {
 
     it("should resolve with unique, numeric ids and symbols for every stock", async () => {
       const promise = generateStockData();
+
       await vi.advanceTimersByTimeAsync(500);
+
       const stocks = await promise;
 
       const ids = stocks.map((s) => s.id);
       const symbols = stocks.map((s) => s.symbol);
+
       expect(new Set(ids).size).toBe(stocks.length);
       expect(new Set(symbols).size).toBe(stocks.length);
       ids.forEach((id) => expect(typeof id).toBe("number"));
@@ -172,10 +181,13 @@ describe("mockStockApi", () => {
 
     it("should include at least one stock in more than one sector", async () => {
       const promise = generateStockData();
+
       await vi.advanceTimersByTimeAsync(500);
+
       const stocks = await promise;
 
       const sectors = new Set(stocks.map((s) => s.sector));
+
       expect(sectors.size).toBeGreaterThan(1);
       expect([...sectors]).toEqual(
         expect.arrayContaining([
@@ -192,6 +204,7 @@ describe("mockStockApi", () => {
   describe("fetchStockDetails", () => {
     it("should resolve after a 500-2500ms randomized delay", async () => {
       const onResolve = vi.fn();
+
       fetchStockDetails("AAPL").then(onResolve);
 
       await vi.advanceTimersByTimeAsync(499);
@@ -203,7 +216,9 @@ describe("mockStockApi", () => {
 
     it("should echo the requested symbol and derive a company name from it", async () => {
       const promise = fetchStockDetails("AAPL");
+
       await vi.advanceTimersByTimeAsync(2500);
+
       const details = await promise;
 
       expect(details.symbol).toBe("AAPL");
@@ -212,12 +227,15 @@ describe("mockStockApi", () => {
 
     it("should resolve with numeric-string fields within their generator's documented ranges", async () => {
       const promise = fetchStockDetails("NVDA");
+
       await vi.advanceTimersByTimeAsync(2500);
+
       const details = await promise;
 
       const numeric = (value) => {
         expect(typeof value).toBe("string");
         expect(value).toMatch(/^-?\d+\.\d{2}$/);
+
         return parseFloat(value);
       };
 
@@ -247,11 +265,15 @@ describe("mockStockApi", () => {
 
     it("should return freshly randomized data on every call rather than a fixed record for the symbol (known issue #5)", async () => {
       const firstPromise = fetchStockDetails("AAPL");
+
       await vi.advanceTimersByTimeAsync(2500);
+
       const first = await firstPromise;
 
       const secondPromise = fetchStockDetails("AAPL");
+
       await vi.advanceTimersByTimeAsync(2500);
+
       const second = await secondPromise;
 
       // Astronomically unlikely to collide by chance across 10 independently
@@ -263,6 +285,7 @@ describe("mockStockApi", () => {
   describe("fetchStockNews", () => {
     it("should resolve after a 1000ms delay", async () => {
       const onResolve = vi.fn();
+
       fetchStockNews("MSFT").then(onResolve);
 
       await vi.advanceTimersByTimeAsync(999);
@@ -274,7 +297,9 @@ describe("mockStockApi", () => {
 
     it("should resolve with exactly 3 articles, each referencing the symbol in its title", async () => {
       const promise = fetchStockNews("MSFT");
+
       await vi.advanceTimersByTimeAsync(1000);
+
       const news = await promise;
 
       expect(news).toEqual([
@@ -306,6 +331,7 @@ describe("mockStockApi", () => {
   describe("fetchHistoricalPrices", () => {
     it("should resolve after an 800ms delay", async () => {
       const onResolve = vi.fn();
+
       fetchHistoricalPrices("GOOGL").then(onResolve);
 
       await vi.advanceTimersByTimeAsync(799);
@@ -319,7 +345,9 @@ describe("mockStockApi", () => {
       vi.setSystemTime(new Date("2026-01-31T12:00:00.000Z"));
 
       const promise = fetchHistoricalPrices("GOOGL");
+
       await vi.advanceTimersByTimeAsync(800);
+
       const prices = await promise;
 
       expect(prices).toHaveLength(31);
@@ -329,12 +357,16 @@ describe("mockStockApi", () => {
 
     it("should resolve with prices formatted as 2-decimal numeric strings between 150 and 250", async () => {
       const promise = fetchHistoricalPrices("GOOGL");
+
       await vi.advanceTimersByTimeAsync(800);
+
       const prices = await promise;
 
       for (const entry of prices) {
         expect(entry.price).toMatch(/^\d+\.\d{2}$/);
+
         const value = parseFloat(entry.price);
+
         expect(value).toBeGreaterThanOrEqual(150);
         expect(value).toBeLessThanOrEqual(250);
       }
@@ -344,10 +376,13 @@ describe("mockStockApi", () => {
       vi.setSystemTime(new Date("2026-01-31T12:00:00.000Z"));
 
       const promise = fetchHistoricalPrices("GOOGL");
+
       await vi.advanceTimersByTimeAsync(800);
+
       const prices = await promise;
 
       const dates = prices.map((p) => new Date(p.date).getTime());
+
       for (let i = 1; i < dates.length; i++) {
         expect(dates[i] - dates[i - 1]).toBe(24 * 60 * 60 * 1000);
       }
