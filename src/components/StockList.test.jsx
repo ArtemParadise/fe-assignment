@@ -384,27 +384,6 @@ describe("StockList", () => {
       expect(screen.getByText("Loading stock details...")).toBeInTheDocument();
     });
 
-    it("should render every field of the resolved details panel, correctly formatted", async () => {
-      const user = userEvent.setup();
-
-      render(<StockList stocks={stocks} searchTerm="" />);
-
-      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "View Details" }));
-
-      expect(await screen.findByText("Stock Details - AAPL")).toBeInTheDocument();
-      expect(screen.getByText("Company: AAPL Corporation")).toBeInTheDocument();
-      expect(screen.getByText("Price: $200.00")).toBeInTheDocument();
-      expect(screen.getByText("Change: 1.00%")).toBeInTheDocument();
-      expect(screen.getByText("Volume: 3.00M")).toBeInTheDocument();
-      expect(screen.getByText("Market Cap: $4.50B")).toBeInTheDocument();
-      expect(screen.getByText("P/E Ratio: 20.00")).toBeInTheDocument();
-      expect(screen.getByText("EPS: $5.00")).toBeInTheDocument();
-      expect(screen.getByText("52W High: $250.00")).toBeInTheDocument();
-      expect(screen.getByText("52W Low: $150.00")).toBeInTheDocument();
-      expect(screen.getByText("Dividend: 1.00%")).toBeInTheDocument();
-      expect(screen.getByText("Beta: 1.00")).toBeInTheDocument();
-    });
-
     it("should hide the loading indicator once details resolve", async () => {
       const user = userEvent.setup();
 

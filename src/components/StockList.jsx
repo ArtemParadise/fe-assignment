@@ -8,6 +8,7 @@ import {
 
 import StockCard from "./StockCard";
 import StockControls from "./StockControls";
+import StockDetailsPanel from "./StockDetailsPanel";
 
 function StockList({ stocks, searchTerm }) {
   const [stockDetails, setStockDetails] = useState(null);
@@ -122,6 +123,14 @@ function StockList({ stocks, searchTerm }) {
       });
   };
 
+  const loadPriceHistory = () => {
+    fetchHistoricalPrices(stockDetails.symbol).then((prices) => {
+      // eslint-disable-next-line no-console -- known issue #16 (docs/known-issues.md): result is only logged, never rendered; not fixing app bugs in this eslint cleanup
+      console.log("Historical prices:", prices);
+      // TODO
+    });
+  };
+
   return (
     <div className="user-list">
       <h2>Stocks ({sortedStocks.length})</h2>
@@ -151,40 +160,11 @@ function StockList({ stocks, searchTerm }) {
         ))}
       </div>
 
-      {loading && <div>Loading stock details...</div>}
-
-      {stockDetails && (
-        <div className="user-details">
-          <h3>Stock Details - {stockDetails.symbol}</h3>
-          <div className="details-grid">
-            <p>Company: {stockDetails.name}</p>
-            <p>Price: ${stockDetails.price}</p>
-            <p>Change: {stockDetails.change}%</p>
-            <p>Volume: {(stockDetails.volume / 1000000).toFixed(2)}M</p>
-            <p>
-              Market Cap: ${(stockDetails.marketCap / 1000000000).toFixed(2)}B
-            </p>
-            <p>P/E Ratio: {stockDetails.pe}</p>
-            <p>EPS: ${stockDetails.eps}</p>
-            <p>52W High: ${stockDetails.high52}</p>
-            <p>52W Low: ${stockDetails.low52}</p>
-            <p>Dividend: {stockDetails.dividend}%</p>
-            <p>Beta: {stockDetails.beta}</p>
-          </div>
-
-          <button
-            onClick={() => {
-              fetchHistoricalPrices(stockDetails.symbol).then((prices) => {
-                // eslint-disable-next-line no-console -- known issue #16 (docs/known-issues.md): result is only logged, never rendered; not fixing app bugs in this eslint cleanup
-                console.log("Historical prices:", prices);
-                // TODO
-              });
-            }}
-          >
-            Load Price History
-          </button>
-        </div>
-      )}
+      <StockDetailsPanel
+        loading={loading}
+        details={stockDetails}
+        onLoadPriceHistory={loadPriceHistory}
+      />
     </div>
   );
 }
