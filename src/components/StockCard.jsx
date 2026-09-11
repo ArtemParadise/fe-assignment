@@ -1,3 +1,7 @@
+const getWatchlistLabel = (symbol, isWatchlisted) => isWatchlisted
+  ? `Remove ${symbol} from watchlist`
+  : `Add ${symbol} to watchlist`;
+
 function StockCard({
   stock,
   isWatchlisted,
@@ -17,6 +21,8 @@ function StockCard({
         <h3>{stock.symbol}</h3>
         <button
           className="fav-btn"
+          aria-label={getWatchlistLabel(stock.symbol, isWatchlisted)}
+          aria-pressed={isWatchlisted}
           onClick={(e) => {
             e.stopPropagation();
             onToggleWatchlist();
