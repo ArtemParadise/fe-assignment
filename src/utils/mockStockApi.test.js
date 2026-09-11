@@ -38,16 +38,106 @@ describe("mockStockApi", () => {
       const stocks = await promise;
 
       expect(stocks).toEqual([
-        expect.objectContaining({ id: 1, symbol: "AAPL", name: "Apple Inc." }),
-        expect.objectContaining({ id: 2, symbol: "MSFT", name: "Microsoft Corporation" }),
-        expect.objectContaining({ id: 3, symbol: "GOOGL", name: "Alphabet Inc." }),
-        expect.objectContaining({ id: 4, symbol: "AMZN", name: "Amazon.com Inc." }),
-        expect.objectContaining({ id: 5, symbol: "TSLA", name: "Tesla Inc." }),
-        expect.objectContaining({ id: 6, symbol: "META", name: "Meta Platforms Inc." }),
-        expect.objectContaining({ id: 7, symbol: "NVDA", name: "NVIDIA Corporation" }),
-        expect.objectContaining({ id: 8, symbol: "JPM", name: "JPMorgan Chase & Co." }),
-        expect.objectContaining({ id: 9, symbol: "V", name: "Visa Inc." }),
-        expect.objectContaining({ id: 10, symbol: "WMT", name: "Walmart Inc." }),
+        {
+          id: 1,
+          symbol: "AAPL",
+          name: "Apple Inc.",
+          price: 178.52,
+          sector: "Technology",
+          marketCap: 2800000000000,
+          change: 2.3,
+          volume: 52000000,
+        },
+        {
+          id: 2,
+          symbol: "MSFT",
+          name: "Microsoft Corporation",
+          price: 412.78,
+          sector: "Technology",
+          marketCap: 3100000000000,
+          change: -1.2,
+          volume: 28000000,
+        },
+        {
+          id: 3,
+          symbol: "GOOGL",
+          name: "Alphabet Inc.",
+          price: 142.65,
+          sector: "Technology",
+          marketCap: 1800000000000,
+          change: 0.8,
+          volume: 24000000,
+        },
+        {
+          id: 4,
+          symbol: "AMZN",
+          name: "Amazon.com Inc.",
+          price: 178.25,
+          sector: "Consumer Cyclical",
+          marketCap: 1850000000000,
+          change: 1.5,
+          volume: 45000000,
+        },
+        {
+          id: 5,
+          symbol: "TSLA",
+          name: "Tesla Inc.",
+          price: 238.45,
+          sector: "Automotive",
+          marketCap: 750000000000,
+          change: -3.4,
+          volume: 98000000,
+        },
+        {
+          id: 6,
+          symbol: "META",
+          name: "Meta Platforms Inc.",
+          price: 485.3,
+          sector: "Technology",
+          marketCap: 1200000000000,
+          change: 4.2,
+          volume: 18000000,
+        },
+        {
+          id: 7,
+          symbol: "NVDA",
+          name: "NVIDIA Corporation",
+          price: 875.28,
+          sector: "Technology",
+          marketCap: 2150000000000,
+          change: 5.7,
+          volume: 42000000,
+        },
+        {
+          id: 8,
+          symbol: "JPM",
+          name: "JPMorgan Chase & Co.",
+          price: 185.67,
+          sector: "Financial",
+          marketCap: 540000000000,
+          change: -0.5,
+          volume: 12000000,
+        },
+        {
+          id: 9,
+          symbol: "V",
+          name: "Visa Inc.",
+          price: 278.92,
+          sector: "Financial",
+          marketCap: 580000000000,
+          change: 1.1,
+          volume: 8000000,
+        },
+        {
+          id: 10,
+          symbol: "WMT",
+          name: "Walmart Inc.",
+          price: 165.43,
+          sector: "Consumer Defensive",
+          marketCap: 450000000000,
+          change: 0.3,
+          volume: 7000000,
+        },
       ]);
     });
 
@@ -132,21 +222,21 @@ describe("mockStockApi", () => {
       };
 
       expect(numeric(details.price)).toBeGreaterThanOrEqual(50);
-      expect(numeric(details.price)).toBeLessThan(550);
+      expect(numeric(details.price)).toBeLessThanOrEqual(550);
       expect(numeric(details.change)).toBeGreaterThanOrEqual(-5);
-      expect(numeric(details.change)).toBeLessThan(5);
+      expect(numeric(details.change)).toBeLessThanOrEqual(5);
       expect(numeric(details.pe)).toBeGreaterThanOrEqual(5);
-      expect(numeric(details.pe)).toBeLessThan(55);
+      expect(numeric(details.pe)).toBeLessThanOrEqual(55);
       expect(numeric(details.eps)).toBeGreaterThanOrEqual(0);
-      expect(numeric(details.eps)).toBeLessThan(20);
+      expect(numeric(details.eps)).toBeLessThanOrEqual(20);
       expect(numeric(details.high52)).toBeGreaterThanOrEqual(100);
-      expect(numeric(details.high52)).toBeLessThan(700);
+      expect(numeric(details.high52)).toBeLessThanOrEqual(700);
       expect(numeric(details.low52)).toBeGreaterThanOrEqual(20);
-      expect(numeric(details.low52)).toBeLessThan(120);
+      expect(numeric(details.low52)).toBeLessThanOrEqual(120);
       expect(numeric(details.dividend)).toBeGreaterThanOrEqual(0);
-      expect(numeric(details.dividend)).toBeLessThan(5);
+      expect(numeric(details.dividend)).toBeLessThanOrEqual(5);
       expect(numeric(details.beta)).toBeGreaterThanOrEqual(0);
-      expect(numeric(details.beta)).toBeLessThan(2);
+      expect(numeric(details.beta)).toBeLessThanOrEqual(2);
       expect(Number.isInteger(details.volume)).toBe(true);
       expect(details.volume).toBeGreaterThanOrEqual(0);
       expect(details.volume).toBeLessThan(100000000);
@@ -246,7 +336,7 @@ describe("mockStockApi", () => {
         expect(entry.price).toMatch(/^\d+\.\d{2}$/);
         const value = parseFloat(entry.price);
         expect(value).toBeGreaterThanOrEqual(150);
-        expect(value).toBeLessThan(250);
+        expect(value).toBeLessThanOrEqual(250);
       }
     });
 

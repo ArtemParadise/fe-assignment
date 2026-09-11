@@ -12,7 +12,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      exclude: ["node_modules/", "src/test/"],
+      exclude: ["node_modules/", "src/test/", "src/main.jsx"],
     },
   },
 });

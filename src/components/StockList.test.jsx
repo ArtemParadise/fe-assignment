@@ -448,6 +448,41 @@ describe("StockList", () => {
       aapl.resolve(aaplDetails);
       expect(await screen.findByText("Stock Details - AAPL")).toBeInTheDocument();
     });
+
+    it("should log the error and leave the loading indicator stuck if fetchStockDetails rejects (known issue #17)", async () => {
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const error = new Error("network down");
+      fetchStockDetails.mockRejectedValue(error);
+      const user = userEvent.setup();
+      render(<StockList stocks={stocks} searchTerm="" />);
+
+      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "View Details" }));
+
+      await waitFor(() => expect(logSpy).toHaveBeenCalledWith(error));
+      expect(screen.getByText("Loading stock details...")).toBeInTheDocument();
+
+      logSpy.mockRestore();
+    });
+
+    it("should fetch and log historical prices when 'Load Price History' is clicked (known issue #16 - the result is never rendered anywhere)", async () => {
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const historicalPrices = [{ date: "2026-01-01", price: "987.65" }];
+      fetchHistoricalPrices.mockResolvedValue(historicalPrices);
+      const user = userEvent.setup();
+      render(<StockList stocks={stocks} searchTerm="" />);
+
+      await user.click(within(cardFor("AAPL")).getByRole("button", { name: "View Details" }));
+      await screen.findByText("Stock Details - AAPL");
+      logSpy.mockClear(); // drop the calls made by the background avg-price effect
+      await user.click(screen.getByRole("button", { name: "Load Price History" }));
+
+      await waitFor(() =>
+        expect(fetchHistoricalPrices).toHaveBeenLastCalledWith("AAPL"),
+      );
+      expect(logSpy).toHaveBeenCalledWith("Historical prices:", historicalPrices);
+
+      logSpy.mockRestore();
+    });
   });
 
   describe("news panel", () => {
