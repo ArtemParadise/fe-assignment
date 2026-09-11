@@ -1,0 +1,44 @@
+# CodeRabbit configuration
+# Docs: https://docs.coderabbit.ai/getting-started/configure-coderabbit
+
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+
+  path_filters:
+    - "!dist/**"
+    - "!coverage/**"
+    - "!node_modules/**"
+    - "!.playwright-mcp/**"
+    - "!package-lock.json"
+
+  path_instructions:
+    - path: "src/components/**/*.jsx"
+      instructions: >
+        Review for React best practices: correct use of hooks, avoiding
+        unnecessary re-renders, proper key usage in lists, and accessibility
+        of interactive elements. Flag missing memoization only when it
+        addresses a real, measurable performance concern.
+    - path: "src/utils/**/*.js"
+      instructions: >
+        Review for correctness of data transformations and API handling.
+        Watch for unhandled promise rejections and missing edge-case
+        handling (empty/undefined inputs).
+    - path: "**/*.test.{js,jsx}"
+      instructions: >
+        Check that tests assert meaningful behavior rather than
+        implementation details, cover edge cases (empty state, loading,
+        error), and avoid unnecessary mocking of the component under test.
+
+chat:
+  auto_reply: true
