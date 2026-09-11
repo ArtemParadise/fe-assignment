@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import {
   fetchStockDetails,
@@ -16,6 +16,7 @@ function StockList({ stocks, searchTerm }) {
   const [expandedStock, setExpandedStock] = useState(null);
   const [filterBySector, setFilterBySector] = useState("");
   const [stockMetrics, setStockMetrics] = useState({});
+  const latestDetailsRequest = useRef(null);
 
   useEffect(() => {
     stocks.forEach((stock) => {
@@ -94,23 +95,27 @@ function StockList({ stocks, searchTerm }) {
   const loadStockNews = (symbol) => {
     setExpandedStock(symbol);
     fetchStockNews(symbol).then((news) => {
-      stockNews[symbol] = news;
-      setStockNews(stockNews);
+      setStockNews((prev) => ({ ...prev, [symbol]: news }));
     });
   };
 
   const viewStockDetails = (symbol) => {
+    latestDetailsRequest.current = symbol;
     setLoading(true);
     fetchStockDetails(symbol)
       .then((data) => {
-        setStockDetails(data);
+        if (latestDetailsRequest.current === symbol) {
+          setStockDetails(data);
+        }
       })
       .catch((err) => {
         // eslint-disable-next-line no-console -- known issue #17 (docs/known-issues.md, fixed): error is only logged to the console, never surfaced to the user; not fixing app bugs in this eslint cleanup
         console.log(err);
       })
       .finally(() => {
-        setLoading(false);
+        if (latestDetailsRequest.current === symbol) {
+          setLoading(false);
+        }
       });
   };
 
