@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from "react";
-import StockList from "./components/StockList";
+import { useState, useEffect } from "react";
+
 import SearchBar from "./components/SearchBar";
+import StockList from "./components/StockList";
 import { generateStockData } from "./utils/mockStockApi";
 import "./App.css";
 
 function App() {
-  const [showTimer, setShowTimer] = useState(false);
   const [stocks, setStocks] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStock, setActiveSelectedStockFromMarketDataRequested] =
-    useState();
 
   useEffect(() => {
     generateStockData().then(setStocks);
@@ -20,17 +18,6 @@ function App() {
   const handleSearch = (term) => {
     setSearchTerm(term);
   };
-
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = stocks.filter(
-        (s) =>
-          s.symbol.includes(searchTerm.toUpperCase()) ||
-          s.name.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
-      setActiveSelectedStockFromMarketDataRequested(filtered[0]);
-    }
-  }, [searchTerm]);
 
   const filteredStocks = stocks.filter(({ name, symbol }) => {
     return (
