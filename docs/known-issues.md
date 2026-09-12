@@ -6,7 +6,7 @@ Ordered roughly by impact.
 
 ## 1. Critical — ~~Sorting by "Avg Price" before data loads crashes the app~~ (Fixed)
 
-**Where:** `src/hooks/useStockSort.js` (the `"metrics"` branch of the sort comparator)
+**Where:** `src/hooks/useStockSort.js` (the `"metrics"` branch) and `src/utils/sorting.js` (`compareByAveragePrice`, extracted from that branch)
 
 **Status: Fixed.** The comparator now reads `stockMetrics[a.id]?.avgPrice` / `stockMetrics[b.id]?.avgPrice` instead of assuming the entry exists, and applies an explicit policy for stocks whose metrics haven't loaded yet: they always sort to the end of the list, regardless of the current ascending/descending direction, rather than throwing. This mirrors the existing "Loading..." placeholder `StockCard` already shows for a missing `avgPrice`. Covered by `useStockSort.test.js > should not throw and should keep original order when sorting by average price before any metrics have loaded (fixes critical bug #1)`, `> should sort stocks with loaded metrics first and push stocks with missing metrics to the end, in both directions`, and the equivalent DOM-level test in `StockList.test.jsx > sorting > should not throw and should keep original order when sorting by average price before any metrics have loaded (fixes critical bug #1)`.
 
@@ -41,7 +41,7 @@ There is no error boundary anywhere in the tree (`App` or `StockList`), so React
 
 ## 2. High — ~~News panel can get permanently stuck on "Loading news…"~~ (Fixed)
 
-**Where:** `src/components/StockList.jsx` (`loadStockNews`)
+**Where:** `src/hooks/useStockNews.js` (`loadStockNews`, extracted from `StockList.jsx`)
 
 **Status: Fixed.** `setStockNews` now builds a new object (`setStockNews((prev) => ({ ...prev, [symbol]: news }))`) instead of mutating and re-setting the same reference, so the news panel reliably re-renders as soon as the response resolves, regardless of whether any other state update happens to fire afterward. Covered by `StockList.test.jsx > news panel > should reveal news as soon as the response resolves, even if nothing else triggers a re-render (issue #2, fixed)` and `> should keep a previously loaded stock's news in state after news for a different stock resolves`.
 
@@ -73,7 +73,7 @@ So the panel's reliability depended entirely on whether some *other* state updat
 
 ## 3. High — Watchlist does not persist, despite being documented as doing so
 
-**Where:** `src/components/StockList.jsx` — `watchlist` is a plain `useState([])`; there is no `localStorage` reference anywhere in the file (confirmed with a full-file read) or the rest of `src/`.
+**Where:** `src/hooks/useWatchlist.js` (moved here from `StockList.jsx` during the hooks decomposition, unchanged) — `watchlist` is a plain `useState([])`; there is no `localStorage` reference anywhere in the hook (confirmed with a full-file read) or the rest of `src/`.
 
 The root [`README.md`](../README.md) lists "Watchlist functionality with localStorage" under Application Features. In the running app:
 - Toggling a star, then reloading the page, clears every star.
@@ -83,7 +83,7 @@ The feature (the star toggle itself, and its visual highlight) works as in-memor
 
 ## 4. Medium — ~~`fetchStockDetails` responses can arrive out of order (no request cancellation)~~ (Fixed)
 
-**Where:** `src/components/StockList.jsx` (`viewStockDetails`)
+**Where:** `src/hooks/useStockDetails.js` (`viewStockDetails`, extracted from `StockList.jsx`)
 
 **Status: Fixed.** A `latestDetailsRequest` ref now records the symbol of the most recently clicked "View Details" request; both the resolve and the `finally` handler check that the response they're processing still matches `latestDetailsRequest.current` before calling `setStockDetails`/`setLoading(false)`. A stale, slower response for a stock that's no longer selected is now discarded instead of overwriting the panel. Covered by `StockList.test.jsx > stock details > should keep showing the most recently requested stock's details when an older, slower request resolves afterward (issue #4, fixed)`.
 
@@ -112,13 +112,13 @@ The function ignores the actual stock record and generates entirely new random n
 
 ## 6. Medium — Non-responsive layout causes horizontal page scroll on narrow viewports
 
-**Where:** `src/App.css` — `.controls` / `.sort-controls` (`~lines 75-98`)
+**Where:** `src/App.css` — `.controls` / `.sort-controls` (`~lines 85-108`)
 
 At a 400px viewport, `document.documentElement.scrollWidth` measures 528px against a `clientWidth` of 385px — a 143px horizontal overflow, caused by the six sort buttons not wrapping within the available width. Visible in [`assets/mobile-overflow.png`](./assets/mobile-overflow.png).
 
 ## 7. Low — Large blank gap on every stock card
 
-**Where:** `src/App.css:167-175`
+**Where:** `src/App.css:177-185`
 
 ```css
 .stock-name {
@@ -130,7 +130,14 @@ At a 400px viewport, `document.documentElement.scrollWidth` measures 528px again
 
 `margin: 88px 0` on `.stock-name` (the company name line, e.g. "Apple Inc.") pushes a large empty gap before the price on every card, visible in every screenshot in [features.md](./features.md). Looks like a stray/leftover value rather than an intentional design choice, given nothing else in the stylesheet uses spacing anywhere near that scale.
 
-## 8. Low — Missing `key` prop on sector `<option>` elements
+## 8. Low — ~~Missing `key` prop on sector `<option>` elements~~ (Fixed)
+
+**Where:** `src/components/StockControls.jsx` (the sector `<select>`, extracted from `StockList.jsx` during the hooks/components decomposition)
+
+**Status: Fixed.** The sector options now render as `<option key={sector} value={sector}>{sector}</option>`, so the console warning is gone. No dedicated test was added for this (a missing-`key` warning isn't something the existing test setup asserts on), but it's confirmed by reading the current component.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/components/StockList.jsx:154-157`
 
@@ -148,14 +155,16 @@ Warning: Each child in a list should have a unique "key" prop.
     at StockList (StockList.jsx:24:22)
 ```
 
-## 9. Low — Dead state and props in `App.jsx`
+</details>
+
+## 9. Low — Dead state and props in `App.jsx` (partially fixed)
 
 **Where:** `src/App.jsx`
 
-- `showTimer` (`useState(false)`, line 8) is declared and never read or rendered anywhere.
-- `selectedStock` / `setActiveSelectedStockFromMarketDataRequested` (line 11) is written inside the `searchTerm` effect (lines 24-33) but never read anywhere in `App` — it's fully dead, and its name collides conceptually with the *different*, actually-used `selectedStock` state local to `StockList`.
-- `filteredStocks` (lines 35-39) is computed and passed to `<StockList filteredStocks={filteredStocks}>` (line 49), but `StockList`'s signature (`StockList.jsx:8`) only destructures `{ stocks, searchTerm }` — the prop is ignored, and `StockList` recomputes an equivalent list internally from `searchTerm` (`StockList.jsx:85-89`). Two implementations of the same filter exist; only one is live.
-- `config = { theme: "dark", lang: "en" }` (line 18) is applied as `style={config}` on the root `<div>` (line 42). `theme` and `lang` aren't real CSS properties, so this has no visual effect — reads like an abandoned theming attempt.
+**Status: Partially fixed.** The dead `showTimer` state and the dead `selectedStock` / `setActiveSelectedStockFromMarketDataRequested` write have both been removed entirely — `App.jsx` no longer declares either. The other two items are still present, unchanged:
+
+- `filteredStocks` (`App.jsx:22-26`) is computed and passed to `<StockList filteredStocks={filteredStocks}>` (`App.jsx:36`), but `StockList`'s signature (`src/components/StockList.jsx:11`) only destructures `{ stocks, searchTerm }` — the prop is ignored, and `StockList` recomputes an equivalent list internally from `searchTerm` via `useStockFilters` (`src/hooks/useStockFilters.js`). Two implementations of the same filter still exist; only one is live.
+- `config = { theme: "dark", lang: "en" }` (`App.jsx:16`) is applied as `style={config}` on the root `<div>` (`App.jsx:29`). `theme` and `lang` aren't real CSS properties, so this still has no visual effect — reads like an abandoned theming attempt.
 
 ## 10. Low — `SearchBar` duplicates `App`'s data fetch
 
@@ -163,17 +172,26 @@ Warning: Each child in a list should have a unique "key" prop.
 
 Rather than receiving the stock list `App` already loaded, `SearchBar` calls `generateStockData()` itself every time the query passes 3 characters, to build its typeahead suggestions. This is a second, independent copy of the same mock "network" call and data source.
 
-## 11. Low — List keyed by array index
+## 11. Low — ~~List keyed by array index~~ (Fixed)
+
+**Where:** `src/components/StockList.jsx` (the stock grid `.map`)
+
+**Status: Fixed.** Each stock item now renders as `<div role="listitem" key={stock.id}>`, keyed by the stable underlying id instead of the array index, so it no longer misbehaves if per-card local/uncontrolled state is ever added.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/components/StockList.jsx:172` (`key={index}` on each stock card, inside a list that's re-sorted and re-filtered by user interaction)
 
 Using the array index as the React key for a reorderable/filterable list is a standard anti-pattern. It doesn't currently produce a visible symptom (nothing in the card holds local component state or uncontrolled DOM state that would need to follow the underlying stock across a re-sort), but it would silently misbehave the moment any such state were added to a card.
 
+</details>
+
 ## 12. Low — Low-contrast text in the details panel
 
-**Where:** `src/App.css:244-250` and `src/App.css:302-304` (two separate, overlapping `.user-details p` rules)
+**Where:** `src/App.css:254-260` and `src/App.css:312-314` (two separate, overlapping `.user-details p` rules)
 
-Details-panel paragraphs render in `#999` at `11px` on a `#e9ecef` background — visibly hard to read in [`assets/details-and-news-stuck.png`](./assets/details-and-news-stuck.png). The two `.user-details p` rules (lines 244-250 and 302-304) also partially conflict: the later one in the file wins for `margin`, the earlier one wins for `color`/`font-size`/`margin-bottom` (which the later rule doesn't redeclare) — functional today only because of CSS cascade order, not because it's written to be.
+Details-panel paragraphs render in `#999` at `11px` on a `#e9ecef` background — visibly hard to read in [`assets/details-and-news-stuck.png`](./assets/details-and-news-stuck.png). The two `.user-details p` rules (lines 254-260 and 312-314) also partially conflict: the later one in the file wins for `margin`, the earlier one wins for `color`/`font-size`/`margin-bottom` (which the later rule doesn't redeclare) — functional today only because of CSS cascade order, not because it's written to be.
 
 ## 13. Cosmetic — Missing favicon (404 on load)
 
@@ -181,11 +199,20 @@ Details-panel paragraphs render in `#999` at `11px` on a `#e9ecef` background �
 
 Produces a `404` in the console on every page load. No functional impact.
 
-## 14. Low — User-triggered fetches modeled as state + effect instead of event handlers
+## 14. Low — ~~User-triggered fetches modeled as state + effect instead of event handlers~~ (Fixed)
+
+**Where:** `src/hooks/useStockDetails.js` (`viewStockDetails`) and `src/hooks/useStockNews.js` (`loadStockNews`)
+
+**Status: Fixed**, as a side effect of the hooks decomposition. `viewStockDetails` and `loadStockNews` now call `fetchStockDetails` / `fetchStockNews` directly from the click handler itself — neither hook has a `useEffect` watching a piece of state to trigger the fetch. (`useStockMetrics.js` still uses `useEffect`, but for the per-stock metrics fetched on mount, not for a user-triggered click — that was never part of this issue.)
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/components/StockList.jsx:20-32` (`[selectedStock]` effect) and `:34-41` (`[expandedStock]` effect)
 
-Both "View Details" and "Show News" are direct click actions, but neither click handler (`setSelectedStock(stock.symbol)` / `loadStockNews` → `setExpandedStock(symbol)`) does the fetch itself. Instead, each click sets a piece of state, and a separate `useEffect` watches that state to fire the actual request. This is the "event modeled as state + effect" pattern ([react.dev: should this code move to an event handler?](https://react.dev/learn/removing-effect-dependencies#should-this-code-move-to-an-event-handler)) — it adds a layer of indirection between the click and the fetch it causes, and is part of why issues #2 and #4 above exist: it makes it easy to lose track of which render cycle a given async response belongs to.
+Both "View Details" and "Show News" are direct click actions, but neither click handler (`setSelectedStock(stock.symbol)` / `loadStockNews` → `setExpandedStock(symbol)`) does the fetch itself. Instead, each click sets a piece of state, and a separate `useEffect` watches that state to fire the actual request. This is the "event modeled as state + effect" pattern ([react.dev: should this code move to an event handler?](https://react.dev/learn/removing-effect-dependencies#should-this-code-move-to-an-event-handler)) — it adds a layer of indirection between the click and the fetch it causes, and was part of why issues #2 and #4 above existed: it made it easy to lose track of which render cycle a given async response belongs to.
+
+</details>
 
 ---
 
@@ -193,7 +220,7 @@ Issues #15-20 below turned up while writing the unit test suite (`src/**/*.test.
 
 ## 15. Medium — ~~"Hide News" never collapses the news panel~~ (Fixed)
 
-**Where:** `src/components/StockList.jsx` (`loadStockNews`)
+**Where:** `src/hooks/useStockNews.js` (`loadStockNews`, extracted from `StockList.jsx`)
 
 **Status: Fixed.** `loadStockNews` now checks whether the clicked symbol is already the expanded one; if so it calls `setExpandedStock(null)` and returns before firing any fetch, instead of always calling `setExpandedStock(symbol)` again. Clicking "Hide News" collapses the panel and the button reverts to "Show News". Covered by `StockList.test.jsx > news panel > should collapse the panel when 'Hide News' is clicked on an already-expanded stock` and `> should not re-fetch news when collapsing an already-expanded stock`.
 
@@ -218,30 +245,27 @@ The button's label is conditional on `isExpanded`, but its `onClick` always call
 
 ## 16. Medium — "Load Price History" fetches data that is never shown anywhere
 
-**Where:** `src/components/StockList.jsx:268-277`
+**Where:** `src/hooks/useStockDetails.js` (`loadPriceHistory`, extracted from `StockList.jsx`)
 
 ```js
-<button
-  onClick={() => {
-    fetchHistoricalPrices(stockDetails.symbol).then((prices) => {
-      console.log("Historical prices:", prices);
-      // TODO
-    });
-  }}
->
-  Load Price History
-</button>
+const loadPriceHistory = () => {
+  fetchHistoricalPrices(stockDetails.symbol).then((prices) => {
+    // eslint-disable-next-line no-console -- known issue #16 (docs/known-issues.md): result is only logged, never rendered; not fixing app bugs in this eslint cleanup
+    console.log("Historical prices:", prices);
+    // TODO
+  });
+};
 ```
 
-Clicking this button does fire a real request, but the result only reaches `console.log` behind a `// TODO`comment — there's no state update, so nothing on screen ever changes. From a user's perspective, the button is dead: nothing visibly happens when it's clicked.
+Still not fixed — this is unchanged behavior from the original report, just relocated during the hooks decomposition, and now explicitly flagged in-code (via the `eslint-disable` comment above) as a known issue rather than something to silently clean up. Clicking the button does fire a real request, but the result only reaches `console.log` behind a `// TODO` comment — there's no state update, so nothing on screen ever changes. From a user's perspective, the button is dead: nothing visibly happens when it's clicked.
 
 ## 17. Medium — ~~`fetchStockDetails` errors are swallowed and leave the loading indicator stuck forever~~ (Fixed)
 
-**Where:** `src/components/StockList.jsx` (`viewStockDetails`)
+**Where:** `src/hooks/useStockDetails.js` (`viewStockDetails`, extracted from `StockList.jsx`)
 
 **Status: Fixed.** The fetch now runs through a `.finally(() => setLoading(false))`, so the loading indicator clears whether the request succeeds or fails. Covered by `StockList.test.jsx > stock details > should log the error and clear the loading indicator if fetchStockDetails rejects (known issue #17, fixed)`.
 
-The error is still only reported via `console.log` (not surfaced anywhere in the UI), so a failed request is still silent from the user's perspective beyond the loader disappearing — only the "stuck forever" part of this issue is resolved.
+The error is still only reported via `console.log` (not surfaced anywhere in the UI, and now marked with an `eslint-disable-next-line no-console` comment in `useStockDetails.js` that explicitly cross-references this issue), so a failed request is still silent from the user's perspective beyond the loader disappearing — only the "stuck forever" part of this issue is resolved.
 
 <details>
 <summary>Original report</summary>
@@ -282,16 +306,25 @@ Selecting a suggestion updates the input and reports the value via `onSearch`, b
 
 `setSuggestions` is only ever called inside the `newValue.length > 2` branch. Clearing the input back to an empty string skips that branch entirely, so whatever suggestions were showing before the clear stay rendered, now disconnected from the (empty) query in the box.
 
-## 20. Low — Dead `sortBy === "name"` branch in `sortStocks`
+## 20. Low — Dead `sortBy === "name"` branch in the sort comparators
 
-**Where:** `src/components/StockList.jsx:65-66`
+**Where:** `src/constants/sorting.js` (`SORT_COMPARATORS[SORT_FIELDS.NAME]`, moved here from the inline `sortStocks` in `StockList.jsx` during the hooks decomposition)
 
 ```js
-} else if (sortBy === "name") {
-  comparison = a.name.localeCompare(b.name);
+export const SORT_FIELDS = {
+  SYMBOL: "symbol",
+  NAME: "name",
+  ...
+};
+
+export const SORT_COMPARATORS = {
+  ...
+  [SORT_FIELDS.NAME]: (a, b) => a.name.localeCompare(b.name),
+  ...
+};
 ```
 
-`sortBy` is only ever set by `handleSort`, which is only ever called from the six sort buttons rendered in the controls bar (Symbol, Price, Change, Volume, Sector, Avg Price) — none of them pass `"name"`. This branch can't be reached through the UI at all; it's the same flavor of dead code as the unused `showTimer`/`selectedStock` state already noted in issue #9, just in `StockList` instead of `App`.
+Still dead: `SORT_FIELDS.NAME` and its comparator exist, but `sortBy` is only ever set by `useStockSort`'s `handleSort`, which is only ever called from the six sort buttons `StockControls.jsx` renders (Symbol, Price, Change, Volume, Sector, Avg Price) — none of them pass `SORT_FIELDS.NAME`. This branch can't be reached through the UI at all; it's the same flavor of dead code as the `filteredStocks`/`config` leftovers now noted in issue #9, just in the sorting module instead of `App`.
 
 ## 21. Low — ~~`formatVolumeInMillions` renders `NaNM`, or silently shows `null` volume as `0.0M`~~ (Fixed)
 
