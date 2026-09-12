@@ -11,10 +11,9 @@ The app looks and behaves the way it always did. Everything that changed is unde
 | Document | What's in it |
 |---|---|
 | **[REPORT.md](./REPORT.md)** | The write-up: what I found, what I changed and why, how I worked, and what I deliberately left alone. |
-| [docs/known-issues.md](./docs/known-issues.md) | All 23 issues found, with location, severity, impact, fix, and the test that pins each one. |
+| [docs/known-issues.md](./docs/known-issues.md) | All 32 issues found, with location, severity, impact, fix, and the test that pins each one. |
 | [docs/features.md](./docs/features.md) | Inventory of what the app actually does — written by driving the running app, not by reading source. |
 | [docs/FE Innovation Assignment.md](./docs/FE%20Innovation%20Assignment.md) | The original brief. |
-| [docs/REPORT.ru.md](./docs/REPORT.ru.md) | Russian draft of the report — the notes it was written from. |
 
 ## Running it
 
@@ -28,7 +27,7 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Vite dev server |
 | `npm run build` | Production build |
 | `npm run preview` | Serve the production build |
-| `npm test` | Run the suite once (132 tests) |
+| `npm test` | Run the suite once (150 tests) |
 | `npm run test:watch` | Watch mode |
 | `npm run test:coverage` | Coverage report |
 | `npm run lint` | ESLint |
@@ -40,9 +39,11 @@ npm run dev          # http://localhost:5173
 src/
   App.jsx                  fetch stocks, hold the search term, pass both down
   components/
+    ErrorBoundary.jsx      catches render errors instead of blanking the page
     SearchBar.jsx          input + typeahead dropdown
     StockList.jsx          composition only — wires hooks to components
     StockCard.jsx          one stock: price, change, watchlist star, news
+    StockNews.jsx          the news panel's loading / empty / loaded states
     StockControls.jsx      sort buttons + sector select
     StockDetailsPanel.jsx  details + price history
   hooks/
@@ -68,7 +69,7 @@ src/
 Every change runs through the same checks locally and in CI:
 
 - **ESLint** (flat config) — `react`, `react-hooks`, `jsx-a11y`, `import/order`, plus `no-unused-vars` and `no-console`.
-- **Vitest + Testing Library** — 132 tests. Fixed bugs carry a regression test tagged with their issue number, so `grep "issue #"` maps tests back to [docs/known-issues.md](./docs/known-issues.md).
+- **Vitest + Testing Library** — 150 tests. Fixed bugs carry a regression test tagged with their issue number, so `grep "issue #"` maps tests back to [docs/known-issues.md](./docs/known-issues.md).
 - **Husky** — `pre-commit` runs lint-staged, `pre-push` runs the suite.
 - **GitHub Actions** — lint, tests, and build on every PR.
 - **CodeRabbit** — automated review on every PR.

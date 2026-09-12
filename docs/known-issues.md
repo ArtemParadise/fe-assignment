@@ -2,7 +2,9 @@
 
 Every issue found during the audit, in the order I'd rank them by impact. Each was either observed directly while driving the running app in a browser, or traced to a specific line while reading the source — usually both.
 
-**22 of 23 are fixed.** The exception is [#5](#issue-5-details-panel-values-are-unrelated-to-the-summary-card-for-the-same-symbol), which is a property of the mock data generator rather than a bug in the app.
+**30 of 32 are fixed.** Two are deliberately left alone: [#5](#issue-5-details-panel-values-are-unrelated-to-the-summary-card-for-the-same-symbol), a property of the mock data generator rather than a bug in the app, and [#31](#issue-31-usewatchlist-computes-the-next-list-from-a-stale-closure-not-changed), where the fix costs more than the unreachable bug it guards against. Both say why in full.
+
+Issues **#1–#23** came out of the first audit pass. **#24–#32** came out of a second pass over the refactored code — mostly error handling, plus the leftovers of earlier fixes that had been applied in one place and missed in another.
 
 Fixes carry a **Tests** line naming the regression test that pins them. Those tests are tagged with their issue number in the source, so `grep -rn "issue #" src` maps them back here. A few issues (dead code, CSS) are verified by reading or by eye rather than by test, and say so.
 
@@ -16,7 +18,7 @@ Fixes carry a **Tests** line naming the regression test that pins them. Those te
 
 **Description:** The "metrics" sort branch read `stockMetrics[a.id].avgPrice` without checking whether the entry existed. Since `stockMetrics` populates asynchronously per stock (~800ms after mount), sorting by Avg Price before all metrics had loaded threw `TypeError: Cannot read properties of undefined (reading 'avgPrice')`.
 
-**Impact:** No error boundary existed anywhere in the tree, so the uncaught error unmounted the entire app — not just the grid, but the search box and header too, leaving a blank page.
+**Impact:** No error boundary existed anywhere in the tree, so the uncaught error unmounted the entire app — not just the grid, but the search box and header too, leaving a blank page. (That structural gap is addressed separately in [#24](#issue-24-no-error-boundary-anywhere-in-the-tree).)
 
 **Solution:** The comparator now reads `stockMetrics[a.id]?.avgPrice` / `stockMetrics[b.id]?.avgPrice` optionally, and stocks whose metrics haven't loaded yet always sort to the end of the list regardless of sort direction, instead of throwing.
 
@@ -50,7 +52,7 @@ Fixes carry a **Tests** line naming the regression test that pins them. Those te
 
 **Impact:** Toggling a star and reloading the page cleared every star; `window.localStorage.length` was `0` immediately after toggling. Only the in-memory/visual half of the feature worked.
 
-**Solution:** `watchlist` now initializes lazily from `localStorage` (key `"watchlist"`, JSON-encoded, falling back to `[]` on missing or invalid data — non-array values included). `toggleWatchlist` writes the new list back through a `persistWatchlist` helper before setting state; both read and write are wrapped in `try`/`catch`, so a disabled or full storage degrades to an in-memory watchlist instead of throwing.
+**Solution:** `watchlist` now initializes lazily from `localStorage` (key `"watchlist"`, JSON-encoded, falling back to `[]` on missing or invalid data — non-array values included), and `toggleWatchlist` writes the new list back through a `persistWatchlist` helper before setting state. Both read and write are wrapped in `try`/`catch`, so a disabled or full storage degrades to an in-memory watchlist instead of throwing. Writing from the handler rather than an effect keeps it to exactly one write per toggle and none on mount — see [#31](#issue-31-usewatchlist-computes-the-next-list-from-a-stale-closure-not-changed) for why the effect-based alternative was tried and dropped.
 
 **Tests:** `useWatchlist.test.js > should persist to localStorage when a stock is toggled on (issue #3, fixed)`, `> ... toggled off (issue #3, fixed)`, and `> should initialize from a previously stored watchlist (issue #3, fixed)`, plus three fallback cases for invalid JSON, a JSON `null`, and a JSON object.
 
@@ -180,7 +182,7 @@ Fixes carry a **Tests** line naming the regression test that pins them. Those te
 
 **Solution:** Each item now renders as `<div role="listitem" key={stock.id}>`, keyed by the stable underlying id instead of the array index.
 
-**Tests:** None specific to the key. `StockList.test.jsx > renders one card per stock, in the order returned by useStockSort` exercises the keyed list; confirmed by reading `StockList.jsx`.
+**Tests:** None specific to the key. `StockList.test.jsx > renders one card per stock, in the order returned by useStockSort` exercises the keyed list; confirmed by reading `StockList.jsx`. (`SearchBar` had the same defect and was missed at the time — see [#28](#issue-28-searchbar-suggestions-keyed-by-array-index).)
 
 ---
 
@@ -274,7 +276,7 @@ Fixes carry a **Tests** line naming the regression test that pins them. Those te
 
 **Impact:** A failed request gave the user no indication it had failed — the UI would appear permanently stuck loading.
 
-**Solution:** The fetch now runs through `.finally(() => setLoading(false))`, so the loading indicator clears whether the request succeeds or fails. (The error is still only `console.log`-ged, not surfaced in the UI — that part remains open.)
+**Solution:** The fetch now runs through `.finally(() => setLoading(false))`, so the loading indicator clears whether the request succeeds or fails, and the `.catch()` reports through `console.error`. The error is still not surfaced in the UI — that part remains open, since showing it needs an error state in the panel, which the "don't redesign" boundary rules out. The same missing-`.catch()` shape turned up in three other fetches, handled in [#26](#issue-26-unhandled-promise-rejections-in-three-fetches).
 
 **Tests:** `useStockDetails.test.js > should log the error and clear loading if fetchStockDetails rejects (issue #17, fixed)`.
 
@@ -373,3 +375,151 @@ Fixes carry a **Tests** line naming the regression test that pins them. Those te
 **Solution:** A new reusable `useClickOutside` hook attaches a `mousedown` listener (only while the dropdown is visible) that closes the dropdown when a click falls outside the search bar's container, without touching the query or input value.
 
 **Tests:** `SearchBar.test.jsx > should close the suggestions list when clicking outside the search bar, without changing the query (issue #23, fixed)`, and the hook itself in `useClickOutside.test.js` (4 cases: outside, inside, disabled, unmount cleanup).
+
+### Issue #24: No error boundary anywhere in the tree
+
+**Location:** `src/main.jsx`, `src/components/ErrorBoundary.jsx`
+
+**Severity:** Medium
+
+**Description:** Nothing in the app caught render errors. This is the structural reason [#1](#issue-1-sorting-by-avg-price-before-data-loads-crashes-the-app) was Critical rather than merely broken: React unmounts the whole tree on an uncaught render error, so a bug isolated to the stock grid took the header and search box down with it.
+
+**Impact:** Any render error — the one in #1, or any future one — turns the entire page blank, with no message and no way back other than a manual reload.
+
+**Solution:** Added an `ErrorBoundary` class component and wrapped `<App />` in it. On a caught error it logs to `console.error` and renders a plain fallback (`role="alert"`) explaining what happened, with a button to reload. Fixing #1 removed the known trigger; this removes the blast radius for the unknown ones.
+
+**Tests:** `ErrorBoundary.test.jsx` — 4 cases: renders children when nothing throws, renders the fallback instead of unmounting when a child throws, logs the caught error, and wires the reload button.
+
+---
+
+### Issue #25: App was not wrapped in `React.StrictMode`
+
+**Location:** `src/main.jsx`
+
+**Severity:** Low
+
+**Description:** The root render was a bare `ReactDOM.createRoot(...).render(<App />)` with no `StrictMode`.
+
+**Impact:** In development, StrictMode double-invokes effects and state updaters to surface impure logic and missing effect cleanup. Without it, exactly the class of bug this codebase had (effects with side effects, state updated from a stale closure) stays invisible until it misbehaves in production.
+
+**Solution:** Wrapped the tree in `<StrictMode>`. Verified in a browser afterwards that the double-invoked effects cause no duplicate-state or console problems: the app loads, sorts, expands news and collapses it with zero console errors or warnings.
+
+**Tests:** None directly — `src/main.jsx` is the composition root and is excluded from coverage. Its effect is that the rest of the suite and the browser pass under StrictMode's stricter semantics.
+
+---
+
+### Issue #26: Unhandled promise rejections in three fetches
+
+**Location:** `src/hooks/useStockMetrics.js`, `src/hooks/useStockNews.js`, `src/hooks/useStockDetails.js` (`loadPriceHistory`)
+
+**Severity:** Medium
+
+**Description:** All three chained `.then()` with no `.catch()`. Only `fetchStockDetails` had error handling, added for [#17](#issue-17-fetchstockdetails-errors-are-swallowed-and-leave-the-loading-indicator-stuck-forever).
+
+**Impact:** A failed request produced an unhandled promise rejection and left the UI on a loading state that could never clear — "Avg: Loading..." on the card, "Loading news..." in the panel, "Loading price history..." under the details. The same failure shape as #17, in three more places.
+
+**Solution:** Each chain now has a `.catch()` that logs via `console.error`. `useStockNews` also records an empty list for the failed symbol so the card can say there's no news rather than sit on a loading message (see [#27](#issue-27-stockcard-treats-an-empty-news-list-as-still-loading)); `loadPriceHistory` keeps its existing `.finally()`, which already cleared the loading flag on both paths.
+
+**Tests:** `useStockNews.test.js > should record an empty list if the request rejects, ending the loading state (issue #26, fixed)`, `useStockMetrics.test.js > should leave a stock's metrics absent and log if its request rejects (issue #26, fixed)`, and `useStockDetails.test.js > should log and clear the loading flag if the price-history request rejects (issue #26, fixed)`.
+
+---
+
+### Issue #27: `StockCard` treats an empty news list as still loading
+
+**Location:** `src/components/StockCard.jsx`, `src/hooks/useStockNews.js`
+
+**Severity:** Medium
+
+**Description:** The card rendered `news.length === 0 ? "Loading news..." : <list>`, and `StockList` passed `stockNews[symbol] || []`. "No articles" and "not loaded yet" were therefore the same state, and the hook tracked no loading flag to tell them apart.
+
+**Impact:** A genuinely empty response — or, once [#26](#issue-26-unhandled-promise-rejections-in-three-fetches) was handled, a failed one — would display "Loading news..." forever. The current mock API always returns 3 articles, so this was latent rather than reproducible, but it's the same defect class as #2.
+
+**Solution:** `StockList` stops collapsing the distinction with `|| []` and passes `stockNews[symbol]` through as-is, so the entry itself carries all three states: **absent** while the request is in flight, **empty array** once it settled with nothing to show (or failed), **non-empty** when there are articles. The card reads them straight off that one value, as a ternary chain rather than `&&` guards (`rendering-conditional-render`).
+
+No loading flag exists anywhere. The first two attempts at this fix both added one — first a `loadingSymbol` state kept in sync from a `.finally()`, then the same value derived during render and passed down as an `isNewsLoading` prop. Both were redundant: the card only renders this block when the stock is expanded, and an expanded stock with no entry yet *is* the loading state. Dropping the concept removed a `useState`, a `.finally()`, a conditional state updater, a derived expression, and a prop — and took both `useStockNews.js` and `StockCard.jsx` to 100% branch coverage, because the branches that existed only to keep the flag honest went with it. (`rerender-derived-state-no-effect`.)
+
+**Tests:** `StockNews.test.jsx > should say there is no news when the response settled empty (issue #27, fixed)` and `> should show a loading message while no news entry has arrived yet` pin the two states apart; `useStockNews.test.js > should leave the entry absent while the request is in flight and set it once resolved` pins the same distinction in the hook. `StockCard.test.jsx` keeps only the card's own concern — whether the panel is rendered at all.
+
+---
+
+### Issue #28: `SearchBar` suggestions keyed by array index
+
+**Location:** `src/components/SearchBar.jsx`
+
+**Severity:** Low
+
+**Description:** The suggestions list rendered `suggestions.map((item, idx) => <li key={idx}>)`. This is the same defect fixed in `StockList` under [#11](#issue-11-list-keyed-by-array-index) — the search component was simply missed at the time.
+
+**Impact:** The list is re-derived on every keystroke, so indexes shift as matches change. With no local state inside the rows nothing visibly breaks today, but the keys are meaningless for reconciliation and would misbehave the moment a row gained state.
+
+**Solution:** Keyed by `item.id`, the stable identifier already present on every stock record.
+
+**Tests:** No dedicated test — like #11, key correctness isn't something the setup asserts on. Covered indirectly by the existing `SearchBar.test.jsx` suggestion tests, which still pass.
+
+---
+
+### Issue #29: `useClickOutside` dereferences a possibly-null ref
+
+**Location:** `src/hooks/useClickOutside.js`
+
+**Severity:** Low
+
+**Description:** The listener called `ref.current.contains(e.target)` with no null check.
+
+**Impact:** Throws if the event fires while the ref holds no element — before the element attaches, or after it unmounts.
+
+**Solution:** Guard `ref.current` before calling `contains`.
+
+**Tests:** `useClickOutside.test.js > should not throw when the ref holds no element yet (issue #29, fixed)`, plus `> should call the latest handler after a re-render, not a stale one`, which pins the behaviour that keeping `onOutsideClick` in the deps gives for free.
+
+**Also considered and dropped:** because `SearchBar` passes a fresh inline arrow, listing `onOutsideClick` in the effect's deps re-subscribes the `document` listener on every render — every keystroke while the dropdown is open. Holding the handler in a ref lets the effect depend on `[ref, enabled]` and attach once (`advanced-use-latest`). I implemented it and took it back out: it trades a `remove`/`addEventListener` pair — two cheap synchronous DOM calls — for a `useRef` plus a second effect that runs on *every* render, and it makes staleness something you now have to reason about rather than get by construction. Same call as [#31](#issue-31-usewatchlist-computes-the-next-list-from-a-stale-closure-not-changed): worth doing when the subscription gets expensive or the component re-renders on something hotter than typing.
+
+---
+
+### Issue #30: Dead CSS for removed features
+
+**Location:** `src/App.css`
+
+**Severity:** Cosmetic
+
+**Description:** `.timer`, `.timer-display`, `.counter`, `.counter h2`, and `.counter p` were still defined. The timer and counter features they styled were removed under [#9](#issue-9-dead-state-and-props-in-appjsx); the CSS was missed.
+
+**Impact:** 28 lines of rules no class in the app references, shipped in every build and misleading anyone reading the stylesheet for what the app contains.
+
+**Solution:** Deleted all five rules. Verified no `className` in `src/` references any of them.
+
+**Tests:** None — pure deletion of unreferenced rules. Confirmed by grepping `className` across `src/` and by the app rendering unchanged in a browser afterwards.
+
+---
+
+### Issue #31: `useWatchlist` computes the next list from a stale closure (not changed)
+
+**Location:** `src/hooks/useWatchlist.js`
+
+**Severity:** Medium
+
+**Description:** `toggleWatchlist` read `watchlist` from the render closure to build the next array, instead of using a functional update. React 18 batches state updates, so two toggles dispatched in the same tick both start from the same stale list.
+
+**Impact:** In principle the second toggle silently discards the first. Reproduced at the hook level: toggling ids 1 and 2 in one batch produces `[2]` instead of `[1, 2]`, and persists the wrong list. **But it is not reachable through the UI** — `toggleWatchlist` is only ever called from a star's click handler, one call per event, and React does not merge two separate user clicks into one tick.
+
+**Solution: deliberately not changed.** The fix is `setWatchlist((current) => …)`, which is the canonical idiom (`rerender-functional-setstate`). The catch is that a functional updater and synchronous persistence are mutually exclusive: with no `next` value outside the updater, `persistWatchlist` has to move either *into* the updater — making it impure, and running it twice under StrictMode ([#25](#issue-25-app-was-not-wrapped-in-reactstrictmode)) — or into a `useEffect` keyed on `watchlist`. I implemented the effect version and then reverted it: measured, it writes `["watchlist","[]"]` to `localStorage` on every mount with no user interaction at all, twice in development. Paying a redundant write on every page load, plus an extra effect to read, to guard a call pattern the app never uses is the wrong trade here.
+
+Worth revisiting if the watchlist ever gains a caller that toggles more than one id at a time — "clear all", "add every result", or anything driven by a loop rather than a click. At that point the functional updater stops being theoretical and the effect earns its cost.
+
+**Tests:** None — nothing changed. The existing `useWatchlist.test.js` persistence and restore-on-mount cases still cover the behaviour that does ship.
+
+---
+
+### Issue #32: Style objects rebuilt on every render
+
+**Location:** `src/components/SearchBar.jsx`, `src/components/StockCard.jsx`
+
+**Severity:** Low
+
+**Description:** `SearchBar` built its `inputStyle` object inside the component body, and `StockCard` passed an inline object literal for the price span. Both are constant, and both were presentation that belonged in the stylesheet rather than in JSX.
+
+**Impact:** A new object per render, so the `style` prop is never referentially equal and the allocation is pure garbage. Negligible at this size, but it's the pattern that stops being free once components are memoised.
+
+**Solution:** Both constants moved into `App.css` as `.search-bar input` and `.stock-price-value`, removing the `style` prop from those elements entirely. The change percentage's style genuinely depends on props (`isPositive`, `isWatchlisted`) and stays inline — that one is state, not styling. This goes further than the `rendering-hoist-jsx` rule's minimum (hoisting to module scope), and it's safe here because these two were static values with no dynamic branch to preserve.
+
+**Tests:** None added. The two constants moved to CSS render identically; the remaining `toHaveStyle` assertions in `StockCard.test.jsx` cover the dynamic span that stayed inline, and the full suite passes unchanged.

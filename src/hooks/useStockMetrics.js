@@ -7,17 +7,22 @@ export function useStockMetrics(stocks) {
 
   useEffect(() => {
     stocks.forEach((stock) => {
-      fetchHistoricalPrices(stock.symbol).then((prices) => {
-        setStockMetrics((prev) => ({
-          ...prev,
-          [stock.id]: {
-            priceHistory: prices.length,
-            avgPrice:
-              prices.reduce((a, b) => a + parseFloat(b.price), 0) /
-              prices.length,
-          },
-        }));
-      });
+      fetchHistoricalPrices(stock.symbol)
+        .then((prices) => {
+          setStockMetrics((prev) => ({
+            ...prev,
+            [stock.id]: {
+              priceHistory: prices.length,
+              avgPrice:
+                prices.reduce((a, b) => a + parseFloat(b.price), 0) /
+                prices.length,
+            },
+          }));
+        })
+        .catch((err) => {
+          // The entry stays absent, which the card already renders as "Avg: Loading...".
+          console.error(`Failed to load metrics for ${stock.symbol}`, err);
+        });
     });
   }, [stocks]);
 

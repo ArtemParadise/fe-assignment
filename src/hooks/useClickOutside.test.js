@@ -51,6 +51,35 @@ describe("useClickOutside", () => {
     expect(onOutsideClick).not.toHaveBeenCalled();
   });
 
+  it("should not throw when the ref holds no element yet (issue #29, fixed)", () => {
+    const onOutsideClick = vi.fn();
+    const ref = { current: null };
+
+    renderHook(() => useClickOutside(ref, onOutsideClick));
+
+    expect(() =>
+      document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })),
+    ).not.toThrow();
+    expect(onOutsideClick).not.toHaveBeenCalled();
+  });
+
+  it("should call the latest handler after a re-render, not a stale one", () => {
+    const ref = { current: container };
+    const first = vi.fn();
+    const second = vi.fn();
+
+    const { rerender } = renderHook(
+      ({ handler }) => useClickOutside(ref, handler),
+      { initialProps: { handler: first } },
+    );
+
+    rerender({ handler: second });
+    document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(first).not.toHaveBeenCalled();
+  });
+
   it("should remove its listener on unmount", () => {
     const onOutsideClick = vi.fn();
     const ref = { current: container };

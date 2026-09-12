@@ -14,9 +14,15 @@ export function useStockNews() {
     }
 
     setExpandedStock(symbol);
-    fetchStockNews(symbol).then((news) => {
-      setStockNews((prev) => ({ ...prev, [symbol]: news }));
-    });
+    fetchStockNews(symbol)
+      .then((news) => {
+        setStockNews((prev) => ({ ...prev, [symbol]: news }));
+      })
+      .catch((err) => {
+        // The empty list is what ends the loading state — see StockNews.
+        console.error(`Failed to load news for ${symbol}`, err);
+        setStockNews((prev) => ({ ...prev, [symbol]: [] }));
+      });
   };
 
   return { stockNews, expandedStock, loadStockNews };
