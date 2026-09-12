@@ -386,3 +386,11 @@ Two distinct symptoms from the same missing validation: an `undefined` or non-nu
 ```
 
 `<small>` is an inline element, and `.user-stats` sets no `display`/`gap`/margin between its children, so the two lines butt up against each other with no separator — rendering as e.g. `Volume: 7.0MAvg: 192.91` instead of two visually distinct stats. Confirmed live in the running app.
+
+## 23. Low — ~~`SearchBar`'s suggestions dropdown stayed open when clicking elsewhere on the page~~ (Fixed)
+
+**Where:** `src/components/SearchBar.jsx`
+
+Turned up while extending the suggestions-lifecycle test coverage for issues #10/#18/#19: the dropdown only ever closed when a suggestion was picked or the query dropped back to the threshold. Clicking anywhere else on the page while it was open (the stock grid, the heading, empty space) left it floating open indefinitely, disconnected from focus.
+
+**Status: Fixed.** `SearchBar` holds a `ref` on its container and passes it, together with a callback that closes the dropdown, to a new reusable `useClickOutside` hook (`src/hooks/useClickOutside.js`). The hook only attaches its `mousedown` listener on `document` while the dropdown is visible (an `enabled` argument), and removes it on cleanup; a click whose target falls outside the ref'd container invokes the callback. The query and input value are untouched — only the dropdown closes. Covered by `SearchBar.test.jsx > should close the suggestions list when clicking outside the search bar, without changing the query (issue #23, fixed)` and, at the unit level, `useClickOutside.test.js`.

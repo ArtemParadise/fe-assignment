@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+
+import { useClickOutside } from "../hooks/useClickOutside";
 
 function SearchBar({ onSearch, placeholder, stocks }) {
   const [value, setValue] = useState("");
   const [shouldShowSuggestions, setShouldShowSuggestions] = useState(false);
+  const containerRef = useRef(null);
 
   const suggestions = shouldShowSuggestions
     ? stocks.filter(({ name }) => name.toLowerCase().includes(value.toLowerCase()))
     : [];
+
+  useClickOutside(containerRef, () => setShouldShowSuggestions(false), shouldShowSuggestions);
 
   const handleChange = (e) => {
     const newValue = e.target.value;
@@ -25,7 +30,7 @@ function SearchBar({ onSearch, placeholder, stocks }) {
   };
 
   return (
-    <div className="search-bar">
+    <div className="search-bar" ref={containerRef}>
       <input
         type="text"
         value={value}

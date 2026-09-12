@@ -208,4 +208,23 @@ describe("SearchBar", () => {
 
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
+
+  it("should close the suggestions list when clicking outside the search bar, without changing the query (issue #23, fixed)", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <div>
+        <SearchBar onSearch={() => {}} placeholder="Search stocks..." stocks={mockStocks} />
+        <button type="button">Outside</button>
+      </div>,
+    );
+
+    await user.type(getInput(), "ama");
+    screen.getByText("Amazing Company");
+
+    await user.click(screen.getByText("Outside"));
+
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+    expect(getInput()).toHaveValue("ama");
+  });
 });
