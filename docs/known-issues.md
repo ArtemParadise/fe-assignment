@@ -61,13 +61,14 @@ useEffect(() => {
 }, [expandedStock]);
 ```
 
-This mutates the existing `stockNews` object in place, then calls `setStockNews` with that *same* object reference. React bails out of re-rendering for a state update when the new value is reference-equal (`Object.is`) to the current value — so this particular `setStockNews` call does not, by itself, cause `StockList` to re-render with the new news data.
+This mutates the existing `stockNews` object in place, then calls `setStockNews` with that _same_ object reference. React bails out of re-rendering for a state update when the new value is reference-equal (`Object.is`) to the current value — so this particular `setStockNews` call does not, by itself, cause `StockList` to re-render with the new news data.
 
 **Observed effect is timing-dependent:**
-- Clicked "Show News" in isolation (no other pending state updates): the card stayed on "Loading news..." indefinitely — the data had actually arrived (confirmed the object was mutated) but nothing triggered a re-render to display it.
-- Clicked "Show News" while the unrelated `stockMetrics` effect (see issue #4) was still mid-flight, resolving stocks one by one: the news content *did* appear, because one of those unrelated `setStockMetrics` updates happened to trigger a re-render after the mutation had already landed.
 
-So the panel's reliability depended entirely on whether some *other* state update happened to fire afterward — it wasn't deterministic from the user's perspective.
+- Clicked "Show News" in isolation (no other pending state updates): the card stayed on "Loading news..." indefinitely — the data had actually arrived (confirmed the object was mutated) but nothing triggered a re-render to display it.
+- Clicked "Show News" while the unrelated `stockMetrics` effect (see issue #4) was still mid-flight, resolving stocks one by one: the news content _did_ appear, because one of those unrelated `setStockMetrics` updates happened to trigger a re-render after the mutation had already landed.
+
+So the panel's reliability depended entirely on whether some _other_ state update happened to fire afterward — it wasn't deterministic from the user's perspective.
 
 </details>
 
@@ -76,6 +77,7 @@ So the panel's reliability depended entirely on whether some *other* state updat
 **Where:** `src/hooks/useWatchlist.js` (moved here from `StockList.jsx` during the hooks decomposition, unchanged) — `watchlist` is a plain `useState([])`; there is no `localStorage` reference anywhere in the hook (confirmed with a full-file read) or the rest of `src/`.
 
 The root [`README.md`](../README.md) lists "Watchlist functionality with localStorage" under Application Features. In the running app:
+
 - Toggling a star, then reloading the page, clears every star.
 - `window.localStorage.length` is `0` immediately after toggling a star and checking in-browser.
 
@@ -100,7 +102,7 @@ export const fetchStockDetails = (symbol) => {
     ...
 ```
 
-Every click on "View Details" started a new `fetchStockDetails` call; the effect didn't track or cancel the previous in-flight request. Because each response is delayed by a random 500–2500ms, clicking stock A and then quickly clicking stock B could result in A's slower response resolving *after* B's and overwriting the panel — so the panel could end up showing details for a stock other than the one currently selected. (The source comment above calls this out explicitly as intentional.)
+Every click on "View Details" started a new `fetchStockDetails` call; the effect didn't track or cancel the previous in-flight request. Because each response is delayed by a random 500–2500ms, clicking stock A and then quickly clicking stock B could result in A's slower response resolving _after_ B's and overwriting the panel — so the panel could end up showing details for a stock other than the one currently selected. (The source comment above calls this out explicitly as intentional.)
 
 </details>
 
@@ -142,9 +144,9 @@ At a 400px viewport, `document.documentElement.scrollWidth` measures 528px again
 **Where:** `src/components/StockList.jsx:154-157`
 
 ```js
-{uniqueSectors.map((sector) => (
-  <option value={sector}>{sector}</option>
-))}
+{
+  uniqueSectors.map((sector) => <option value={sector}>{sector}</option>);
+}
 ```
 
 No `key` is provided, which React flags on every render:
@@ -248,7 +250,7 @@ const loadStockNews = (symbol) => {
 </button>
 ```
 
-The button's label is conditional on `isExpanded`, but its `onClick` always calls `loadStockNews(stock.symbol)` — there is no branch that ever calls `setExpandedStock(null)`. Once a card's news panel is expanded, clicking "Hide News" just calls `setExpandedStock` with the *same* symbol again (a no-op state update), so the panel never closes and the button stays reading "Hide News" for the rest of the session. Covered by `src/components/StockList.test.jsx > news panel > should not collapse the panel when 'Hide News' is clicked`.
+The button's label is conditional on `isExpanded`, but its `onClick` always calls `loadStockNews(stock.symbol)` — there is no branch that ever calls `setExpandedStock(null)`. Once a card's news panel is expanded, clicking "Hide News" just calls `setExpandedStock` with the _same_ symbol again (a no-op state update), so the panel never closes and the button stays reading "Hide News" for the rest of the session. Covered by `src/components/StockList.test.jsx > news panel > should not collapse the panel when 'Hide News' is clicked`.
 
 </details>
 
