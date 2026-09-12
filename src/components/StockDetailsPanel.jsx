@@ -1,3 +1,5 @@
+import { formatVolumeLabel } from "../utils/formatters";
+
 function StockDetailsPanel({ loading, details, onLoadPriceHistory }) {
   return (
     <>
@@ -10,7 +12,7 @@ function StockDetailsPanel({ loading, details, onLoadPriceHistory }) {
             <p>Company: {details.name}</p>
             <p>Price: ${details.price}</p>
             <p>Change: {details.change}%</p>
-            <p>Volume: {(details.volume / 1000000).toFixed(2)}M</p>
+            <p>Volume: {formatVolumeLabel(details.volume, 2)}</p>
             <p>
               Market Cap: ${(details.marketCap / 1000000000).toFixed(2)}B
             </p>

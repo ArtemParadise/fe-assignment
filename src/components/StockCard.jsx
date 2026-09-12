@@ -1,3 +1,5 @@
+import { formatVolumeLabel } from "../utils/formatters";
+
 const getWatchlistLabel = (symbol, isWatchlisted) => isWatchlisted
   ? `Remove ${symbol} from watchlist`
   : `Add ${symbol} to watchlist`;
@@ -53,7 +55,7 @@ function StockCard({
       <p className="stock-sector">{stock.sector}</p>
 
       <div className="user-stats">
-        <small>Volume: {(stock.volume / 1000000).toFixed(1)}M</small>
+        <small>Volume: {formatVolumeLabel(stock.volume)}</small>
         <small>Avg: {avgPrice?.toFixed(2) || "Loading..."}</small>
       </div>
 
