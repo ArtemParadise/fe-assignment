@@ -1,47 +1,53 @@
 # Features
 
-Everything below was exercised in a real browser against the running dev server (not just read from source). Screenshots are in [`assets/`](./assets).
+What the app does, as it behaves now. Everything below was exercised in a real browser against the running dev server, not just read from source.
 
-![Main dashboard](./assets/dashboard-main.png)
-*The default view: 10 stock cards, sort controls, sector filter, search box.*
+This started as a baseline inventory of the original app — the point was to know exactly what I had to avoid breaking before touching anything. It's since been updated to match current behaviour. Where a feature changed, it says so and links to the issue.
 
 ## 1. Stock list
 
-A grid of 10 fixed stocks, each card showing: symbol, star (watchlist toggle), company name, price, % change (green if ≥ 0, red if negative), a sector badge, trading volume in millions, and a running average price ("Avg") computed client-side from 31 days of mock historical data fetched once per stock on load. The heading above the grid ("Stocks (N)") reflects the count *after* search + sector filtering are applied.
+A grid of 10 fixed stocks. Each card shows: symbol, star (watchlist toggle), company name, price, % change (green if ≥ 0, red if negative), sector, trading volume in millions, and a running average price ("Avg") computed client-side from 31 days of mock historical data fetched once per stock on load. Until a stock's average arrives, the card shows "Loading..." in its place.
+
+The heading above the grid ("Stocks (N)") reflects the count *after* search and sector filtering are applied.
 
 ## 2. Search
 
 The search box filters the grid by:
+
 - **Symbol** — case-insensitive substring match (typing `aapl` matches `AAPL`).
 - **Company name** — case-insensitive substring match (typing `apple` matches "Apple Inc.").
 
-It does **not** match against sector — typing `tec` (a substring of "Technology") returns zero results even though 5 of the 10 stocks are in the Technology sector, because the filter only looks at `symbol` and `name`.
+It does **not** match against sector — typing `tec` (a substring of "Technology") returns zero results even though 5 of the 10 stocks are in the Technology sector, because the filter only looks at `symbol` and `name`. That's existing behaviour, left as-is.
 
-Independently of the main grid filtering, once the query is longer than 2 characters a typeahead dropdown appears below the input, listing company names that match — sourced from `SearchBar`'s own separate mock data fetch (see [architecture.md](./architecture.md)). Clicking a suggestion fills the input and re-triggers the search.
+Independently of the grid filtering, once the query is longer than 2 characters a typeahead dropdown appears below the input listing matching company names. Clicking a suggestion fills the input and re-triggers the search. The dropdown closes when you pick a suggestion, clear the query back to the threshold, or click anywhere outside the search bar.
+
+*Changed:* suggestions used to come from a second, redundant `generateStockData()` call inside `SearchBar`; it now filters the already-loaded list passed down from `App` ([#10](./known-issues.md#issue-10-searchbar-duplicates-apps-data-fetch)). The dropdown previously stayed open in all three of those dismissal cases ([#18](./known-issues.md#issue-18-searchbars-suggestions-dropdown-never-closes-after-picking-a-suggestion), [#19](./known-issues.md#issue-19-stale-suggestions-stay-visible-after-the-search-box-is-cleared), [#23](./known-issues.md#issue-23-searchbars-suggestions-dropdown-stayed-open-when-clicking-elsewhere-on-the-page)).
 
 ## 3. Sort
 
-Six sort keys are available as buttons: Symbol, Price, Change, Volume, Sector, Avg Price. Clicking a key sorts ascending; clicking the same key again flips to descending (indicated by an arrow, e.g. "Symbol ↑" / "Symbol ↓"). Verified: clicking **Price** produces `$142.65 → $165.43 → $178.25 → $178.52 → $185.67 → $238.45 → $278.92 → $412.78 → $485.30 → $875.28`, i.e. correct ascending numeric order.
+Six sort keys as buttons: Symbol, Price, Change, Volume, Sector, Avg Price. Clicking a key sorts ascending; clicking the same key again flips to descending, shown by an arrow ("Symbol ↑" / "Symbol ↓"). Switching to a different key resets to ascending.
 
-**Sorting by "Avg Price" before the per-stock averages have finished loading used to crash the app; this is now fixed** — stocks whose average hasn't loaded yet sort to the end of the list instead. See [known-issues.md](./known-issues.md) (issue #1) for the original reproduction and the fix.
+Verified: clicking **Price** produces `$142.65 → $165.43 → $178.25 → $178.52 → $185.67 → $238.45 → $278.92 → $412.78 → $485.30 → $875.28`.
+
+*Changed:* sorting by "Avg Price" before the per-stock averages finished loading used to crash the whole app. Stocks whose average hasn't arrived now sort to the end of the list, in both directions ([#1](./known-issues.md#issue-1-sorting-by-avg-price-before-data-loads-crashes-the-app)).
 
 ## 4. Sector filter
 
-A `<select>` restricts the grid to one sector (Technology, Consumer Cyclical, Automotive, Financial, Consumer Defensive — derived from whatever sectors exist in the current stock list). It composes with search (search is applied first) and with sort (sort is applied last).
+A `<select>` restricts the grid to one sector — Technology, Consumer Cyclical, Automotive, Financial, Consumer Defensive, derived from whatever sectors exist in the current stock list. It composes with search (applied first) and sort (applied last).
 
 ## 5. Watchlist (star toggle)
 
-Clicking the star (☆) on a card fills it (★) and gives the card a gold border/highlight. This is **in-memory React state only** — confirmed by:
-- Reloading the page: the star and highlight are gone.
-- Checking the browser directly after toggling a star: `window.localStorage.length === 0`.
+Clicking the star (☆) on a card fills it (★) and gives the card a gold highlight. The watchlist is stored in `localStorage` under the key `watchlist`, so it survives a page reload.
 
-This directly contradicts the root [`README.md`](../README.md)'s feature list, which advertises "Watchlist functionality with localStorage." See [known-issues.md](./known-issues.md#3-high--watchlist-does-not-persist-despite-being-documented-as-doing-so).
+*Changed:* this was in-memory React state only, despite the original README advertising "Watchlist functionality with localStorage" — `window.localStorage.length` was `0` immediately after toggling a star, and reloading cleared every star ([#3](./known-issues.md#issue-3-watchlist-does-not-persist-despite-being-documented-as-doing-so)).
 
 ## 6. View Details
 
-Clicking "View Details" on a card fetches a details record (500–2500ms simulated delay, shows a "Loading stock details..." indicator meanwhile) and renders it in a panel below the grid: company name, price, change %, volume, market cap, P/E ratio, EPS, 52-week high/low, dividend yield, beta.
+Clicking "View Details" fetches a details record (500–2500ms simulated delay, with a "Loading stock details..." indicator meanwhile) and renders it in a panel below the grid: company name, price, change %, volume, market cap, P/E ratio, EPS, 52-week high/low, dividend yield, beta.
 
-The values shown are **independently randomized per request** and not tied to the summary card's numbers. Captured example for AAPL in the same session:
+Clicking several stocks in quick succession always leaves the panel showing the stock you clicked last, even when an earlier request resolves after a later one ([#4](./known-issues.md#issue-4-fetchstockdetails-responses-can-arrive-out-of-order-no-request-cancellation)).
+
+**Still open:** the values are independently randomized per request and aren't tied to the summary card's numbers. Captured for AAPL in one session:
 
 | | Summary card | Details panel (moments later) |
 |---|---|---|
@@ -49,24 +55,22 @@ The values shown are **independently randomized per request** and not tied to th
 | Change | +2.30% | +1.83% |
 | Company | Apple Inc. | AAPL Corporation |
 
-This is a property of the mock API (`fetchStockDetails` generates fresh random numbers rather than looking anything up — see [architecture.md](./architecture.md)), not a UI glitch, but it means the details panel can't currently be trusted to describe the same "stock" as the card that opened it.
-
-![Details panel and an expanded news card](./assets/details-and-news-stuck.png)
-*"Stock Details - AAPL" open at the bottom; GOOGL's news expanded above it.*
+This is a property of the mock API — `fetchStockDetails` generates fresh random numbers rather than looking anything up — not a UI bug, so fixing it would mean rewriting the fake data source rather than the app. Left as-is and documented ([#5](./known-issues.md#issue-5-details-panel-values-are-unrelated-to-the-summary-card-for-the-same-symbol)).
 
 ## 7. Show/Hide News
 
-Clicking "Show News" on a card expands an inline panel with 3 mock articles (title, date, first 80 characters of a summary) under that card; the button becomes "Hide News" and toggles it closed. Content is templated per symbol (e.g. "`{SYMBOL}` Reports Strong Q4 Earnings") — it's the same 3 headlines/dates for every stock, just with the symbol substituted in.
+Clicking "Show News" expands an inline panel with 3 mock articles (title, date, first 80 characters of the summary) under that card. The button becomes "Hide News" and collapses the panel again, without re-fetching. Content is templated per symbol (e.g. "`{SYMBOL}` Reports Strong Q4 Earnings") — the same 3 headlines and dates for every stock with the symbol substituted in.
 
-**This panel is unreliable.** Depending on timing, it can get stuck permanently on "Loading news..." even though the data has actually arrived. Both outcomes (stuck, and eventually-displayed) were reproduced in the same session — see [known-issues.md](./known-issues.md#2-high--news-panel-can-get-permanently-stuck-on-loading-news).
+*Changed:* the panel could get stuck permanently on "Loading news..." even after the data arrived ([#2](./known-issues.md#issue-2-news-panel-can-get-permanently-stuck-on-loading-news)), and "Hide News" was a no-op that never collapsed anything ([#15](./known-issues.md#issue-15-hide-news-never-collapses-the-news-panel)).
 
 ## 8. Load Price History
 
-A button inside the details panel, "Load Price History," fetches 31 days of mock price history but only `console.log`s the result — nothing is rendered in the UI. The source marks this with a `// TODO` comment, so it reads as intentionally unfinished rather than a bug.
+A button inside the details panel, "Load Price History", fetches 31 days of mock price history and renders it as a scrollable `date: $price` list, with a "Loading price history..." message while in flight. The list resets when you open a different stock's details.
+
+*Changed:* the button fetched the data and only `console.log`-ged it — nothing appeared in the UI, so the control was dead from a user's point of view ([#16](./known-issues.md#issue-16-load-price-history-fetches-data-that-is-never-shown-anywhere)).
 
 ## Responsiveness
 
-At a 400px viewport (typical phone width), the sort-controls row overflows the container instead of wrapping, producing a horizontal scrollbar on the whole page (`document.documentElement.scrollWidth` = 528px vs. `clientWidth` = 385px, measured directly in-browser).
+At a 400px viewport the sort-controls row wraps onto multiple lines and the page does not scroll horizontally (`scrollWidth` equals `clientWidth` at 385px).
 
-![Horizontal overflow at 400px width](./assets/mobile-overflow.png)
-*Sort buttons run off the right edge of the viewport; the page scrolls horizontally.*
+*Changed:* the row used to overflow its container, producing a horizontal scrollbar across the whole page — 528px of content in a 385px viewport ([#6](./known-issues.md#issue-6-non-responsive-layout-causes-horizontal-page-scroll-on-narrow-viewports)).
