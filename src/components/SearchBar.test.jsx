@@ -204,7 +204,7 @@ describe("SearchBar", () => {
 
     await user.type(getInput(), "ama");
     screen.getByText("Amazing Company");
-    await user.clear(getInput());
+    await user.type(getInput(), "{backspace}");
 
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
