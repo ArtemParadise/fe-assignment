@@ -136,8 +136,14 @@ describe("useStockDetails", () => {
     logSpy.mockRestore();
   });
 
-  it("should fetch and log historical prices for the current details' symbol when loadPriceHistory is called (issue #16, never rendered)", async () => {
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  it("should start with no price history and not loading it", () => {
+    const { result } = renderHook(() => useStockDetails());
+
+    expect(result.current.priceHistory).toBeNull();
+    expect(result.current.priceHistoryLoading).toBe(false);
+  });
+
+  it("should fetch and populate historical prices for the current details' symbol when loadPriceHistory is called (issue #16, fixed)", async () => {
     const historicalPrices = [{ date: "2026-01-01", price: "987.65" }];
 
     fetchStockDetails.mockResolvedValue(aaplDetails);
@@ -148,11 +154,57 @@ describe("useStockDetails", () => {
     act(() => result.current.viewStockDetails("AAPL"));
     await waitFor(() => expect(result.current.stockDetails).toEqual(aaplDetails));
 
-    await act(() => result.current.loadPriceHistory());
+    act(() => result.current.loadPriceHistory());
+    expect(result.current.priceHistoryLoading).toBe(true);
+
+    await waitFor(() => expect(result.current.priceHistoryLoading).toBe(false));
 
     expect(fetchHistoricalPrices).toHaveBeenCalledWith("AAPL");
-    expect(logSpy).toHaveBeenCalledWith("Historical prices:", historicalPrices);
+    expect(result.current.priceHistory).toEqual(historicalPrices);
+  });
 
-    logSpy.mockRestore();
+  it("should discard a stale price-history response for a stock that's no longer selected", async () => {
+    const aaplHistory = createDeferred();
+
+    fetchStockDetails.mockResolvedValueOnce({ ...aaplDetails, symbol: "AAPL" });
+    fetchHistoricalPrices.mockReturnValueOnce(aaplHistory.promise);
+
+    const { result } = renderHook(() => useStockDetails());
+
+    act(() => result.current.viewStockDetails("AAPL"));
+    await waitFor(() => expect(result.current.stockDetails?.symbol).toBe("AAPL"));
+
+    act(() => result.current.loadPriceHistory());
+
+    fetchStockDetails.mockResolvedValueOnce({ ...aaplDetails, symbol: "NVDA" });
+    act(() => result.current.viewStockDetails("NVDA"));
+    await waitFor(() => expect(result.current.stockDetails?.symbol).toBe("NVDA"));
+
+    aaplHistory.resolve([{ date: "2026-01-01", price: "1.00" }]);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(result.current.priceHistory).toBeNull();
+    expect(result.current.priceHistoryLoading).toBe(false);
+  });
+
+  it("should reset price history when a new stock's details are requested", async () => {
+    const historicalPrices = [{ date: "2026-01-01", price: "987.65" }];
+
+    fetchStockDetails.mockResolvedValue(aaplDetails);
+    fetchHistoricalPrices.mockResolvedValue(historicalPrices);
+
+    const { result } = renderHook(() => useStockDetails());
+
+    act(() => result.current.viewStockDetails("AAPL"));
+    await waitFor(() => expect(result.current.stockDetails).toEqual(aaplDetails));
+
+    act(() => result.current.loadPriceHistory());
+    await waitFor(() => expect(result.current.priceHistory).toEqual(historicalPrices));
+
+    act(() => result.current.viewStockDetails("NVDA"));
+
+    expect(result.current.priceHistory).toBeNull();
+
+    await waitFor(() => expect(result.current.stockDetails).toEqual(aaplDetails));
   });
 });

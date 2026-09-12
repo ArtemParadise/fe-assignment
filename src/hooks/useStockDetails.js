@@ -5,12 +5,16 @@ import { fetchStockDetails, fetchHistoricalPrices } from "../utils/mockStockApi"
 export function useStockDetails() {
   const [stockDetails, setStockDetails] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [priceHistory, setPriceHistory] = useState(null);
+  const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
   const latestDetailsRequestId = useRef(0);
 
   const viewStockDetails = (symbol) => {
     const requestId = ++latestDetailsRequestId.current;
 
     setLoading(true);
+    setPriceHistory(null);
+    setPriceHistoryLoading(false);
     fetchStockDetails(symbol)
       .then((data) => {
         if (latestDetailsRequestId.current === requestId) {
@@ -29,12 +33,29 @@ export function useStockDetails() {
   };
 
   const loadPriceHistory = () => {
-    fetchHistoricalPrices(stockDetails.symbol).then((prices) => {
-      // eslint-disable-next-line no-console -- known issue #16 (docs/known-issues.md): result is only logged, never rendered; not fixing app bugs in this eslint cleanup
-      console.log("Historical prices:", prices);
-      // TODO
-    });
+    const requestId = latestDetailsRequestId.current;
+    const symbol = stockDetails.symbol;
+
+    setPriceHistoryLoading(true);
+    fetchHistoricalPrices(symbol)
+      .then((prices) => {
+        if (latestDetailsRequestId.current === requestId) {
+          setPriceHistory(prices);
+        }
+      })
+      .finally(() => {
+        if (latestDetailsRequestId.current === requestId) {
+          setPriceHistoryLoading(false);
+        }
+      });
   };
 
-  return { stockDetails, loading, viewStockDetails, loadPriceHistory };
+  return {
+    stockDetails,
+    loading,
+    priceHistory,
+    priceHistoryLoading,
+    viewStockDetails,
+    loadPriceHistory,
+  };
 }
