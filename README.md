@@ -1,59 +1,78 @@
-# Frontend Engineer Interview Assignment
+# Stock Trading Dashboard
 
-## Overview
+A refactor of a deliberately flawed React dashboard, done as the FE Innovation Assignment.
 
-This is a code review assignment for Senior Frontend Engineer candidates. The application is intentionally written with multiple issues, anti-patterns, and bad practices commonly found in real-world React applications.
+The starting point was a small, working stock-trading dashboard written without much care — dead code, an over-stuffed `StockList`, a crash when sorting before data loaded, a watchlist that claimed to persist but didn't, and a handful of half-built features. The brief was to bring it up to a standard I'd be comfortable owning, **without redesigning the UI or changing what the app does**.
 
-## Candidate Instructions
+The app looks and behaves the way it always did. Everything that changed is underneath.
 
-Your task is to review this codebase and identify as many issues as possible. For each issue you find:
+## Start here
 
-1. Describe the problem
-2. Explain why it's problematic
-3. Provide a corrected solution
-4. Rate the severity (Critical/High/Medium/Low)
+| Document | What's in it |
+|---|---|
+| **[REPORT.md](./REPORT.md)** | The write-up: what I found, what I changed and why, how I worked, and what I deliberately left alone. |
+| [docs/known-issues.md](./docs/known-issues.md) | All 23 issues found, with location, severity, impact, fix, and the test that pins each one. |
+| [docs/features.md](./docs/features.md) | Inventory of what the app actually does — written by driving the running app, not by reading source. |
+| [docs/FE Innovation Assignment.md](./docs/FE%20Innovation%20Assignment.md) | The original brief. |
+| [docs/REPORT.ru.md](./docs/REPORT.ru.md) | Russian draft of the report — the notes it was written from. |
 
-## Running the Application
+## Running it
 
 ```bash
-# Install dependencies
 npm install
-
-# Run development server
-npm run dev
+npm run dev          # http://localhost:5173
 ```
 
-The app will be available at `http://localhost:5173`
+| Script | |
+|---|---|
+| `npm run dev` | Vite dev server |
+| `npm run build` | Production build |
+| `npm run preview` | Serve the production build |
+| `npm test` | Run the suite once (132 tests) |
+| `npm run test:watch` | Watch mode |
+| `npm run test:coverage` | Coverage report |
+| `npm run lint` | ESLint |
+| `npm run lint:fix` | ESLint with autofix |
 
-## Application Features
-
-The stock trading dashboard includes:
-
-- Real-time stock listings with prices and changes
-- Sorting by symbol, price, change, volume, sector
-- Filtering by market sector
-- Watchlist functionality with localStorage
-- Stock detail views with metrics
-- News feed for individual stocks
-- Price history data
-
-## Submission
-
-Please provide:
-
-1. A document listing all issues found (use the template below)
-2. Fixed code for critical issues
-3. Estimated time spent on the review
-
-### Issue Template
+## How it's laid out
 
 ```
-Issue #X: [Brief Title]
-Location: [File:Line]
-Severity: [Critical/High/Medium/Low]
-Description: [What's wrong]
-Impact: [Why it matters]
-Solution: [How to fix it]
+src/
+  App.jsx                  fetch stocks, hold the search term, pass both down
+  components/
+    SearchBar.jsx          input + typeahead dropdown
+    StockList.jsx          composition only — wires hooks to components
+    StockCard.jsx          one stock: price, change, watchlist star, news
+    StockControls.jsx      sort buttons + sector select
+    StockDetailsPanel.jsx  details + price history
+  hooks/
+    useWatchlist.js        watchlist state, persisted to localStorage
+    useStockFilters.js     search + sector filtering, unique sectors
+    useStockSort.js        sort field/direction
+    useStockMetrics.js     per-stock average price from historical data
+    useStockNews.js        per-stock news, expand/collapse
+    useStockDetails.js     details + price history, with stale-response guards
+    useClickOutside.js     reusable outside-click listener
+  utils/
+    mockStockApi.js        the simulated API (unchanged)
+    formatters.js          volume formatting
+    sorting.js             the one comparator that needs external state
+  constants/
+    sorting.js             sort fields + comparator lookup table
 ```
 
-Good luck!
+`StockList` was the centre of gravity in the original — sorting, filtering, four fetches, watchlist and news state all lived in one file. It's now composition only; every piece of behaviour sits in a hook that can be tested on its own.
+
+## Quality gates
+
+Every change runs through the same checks locally and in CI:
+
+- **ESLint** (flat config) — `react`, `react-hooks`, `jsx-a11y`, `import/order`, plus `no-unused-vars` and `no-console`.
+- **Vitest + Testing Library** — 132 tests. Fixed bugs carry a regression test tagged with their issue number, so `grep "issue #"` maps tests back to [docs/known-issues.md](./docs/known-issues.md).
+- **Husky** — `pre-commit` runs lint-staged, `pre-push` runs the suite.
+- **GitHub Actions** — lint, tests, and build on every PR.
+- **CodeRabbit** — automated review on every PR.
+
+## Scope
+
+The brief drew one hard line: don't redesign, don't add or remove features. I stayed on the right side of it. The changes that do touch what a user sees are all cases where an existing control was broken or a documented feature didn't work — a "Hide News" button that didn't hide, a "Load Price History" button whose result went to `console.log`, a watchlist the original README advertised as persistent but wasn't. Each one is argued individually in [REPORT.md](./REPORT.md#uiux-changes-and-why-each-one-is-in-scope).
