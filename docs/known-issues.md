@@ -166,11 +166,20 @@ Warning: Each child in a list should have a unique "key" prop.
 - `filteredStocks` (`App.jsx:22-26`) is computed and passed to `<StockList filteredStocks={filteredStocks}>` (`App.jsx:36`), but `StockList`'s signature (`src/components/StockList.jsx:11`) only destructures `{ stocks, searchTerm }` — the prop is ignored, and `StockList` recomputes an equivalent list internally from `searchTerm` via `useStockFilters` (`src/hooks/useStockFilters.js`). Two implementations of the same filter still exist; only one is live.
 - `config = { theme: "dark", lang: "en" }` (`App.jsx:16`) is applied as `style={config}` on the root `<div>` (`App.jsx:29`). `theme` and `lang` aren't real CSS properties, so this still has no visual effect — reads like an abandoned theming attempt.
 
-## 10. Low — `SearchBar` duplicates `App`'s data fetch
+## 10. Low — ~~`SearchBar` duplicates `App`'s data fetch~~ (Fixed)
+
+**Where:** `src/components/SearchBar.jsx`
+
+**Status: Fixed.** `SearchBar` now takes the already-loaded stock list as a `stocks` prop (passed down from `App`, `src/App.jsx`) and filters it directly to build suggestions, instead of calling `generateStockData()` itself. There is no fetch left in `SearchBar` at all — suggestions are derived synchronously on every keystroke past the threshold. Covered by `SearchBar.test.jsx > should render matching suggestions the instant the query exceeds 2 characters, straight from the stocks prop (issue #10, fixed)`.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/components/SearchBar.jsx:14-22`
 
 Rather than receiving the stock list `App` already loaded, `SearchBar` calls `generateStockData()` itself every time the query passes 3 characters, to build its typeahead suggestions. This is a second, independent copy of the same mock "network" call and data source.
+
+</details>
 
 ## 11. Low — ~~List keyed by array index~~ (Fixed)
 
@@ -287,7 +296,14 @@ The `.catch` only logs the error — it never calls `setLoading(false)`. If `fet
 
 </details>
 
-## 18. Low — `SearchBar`'s suggestions dropdown never closes after picking a suggestion
+## 18. Low — ~~`SearchBar`'s suggestions dropdown never closes after picking a suggestion~~ (Fixed)
+
+**Where:** `src/components/SearchBar.jsx`
+
+**Status: Fixed.** Picking a suggestion now calls `setSuggestionsVisible(false)` alongside updating the input and reporting the value via `onSearch`, so the dropdown closes immediately after a selection. Covered by `SearchBar.test.jsx > should close the suggestions list after a suggestion is clicked (issue #18, fixed)`.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/components/SearchBar.jsx:48-55`
 
@@ -300,11 +316,22 @@ onClick={() => {
 
 Selecting a suggestion updates the input and reports the value via `onSearch`, but never calls `setSuggestions([])`. The (now stale) suggestions list stays open underneath the input after a selection.
 
-## 19. Low — Stale suggestions stay visible after the search box is cleared
+</details>
+
+## 19. Low — ~~Stale suggestions stay visible after the search box is cleared~~ (Fixed)
+
+**Where:** `src/components/SearchBar.jsx` (`handleChange`)
+
+**Status: Fixed.** As part of the same fix as issues #10 and #18, suggestions are no longer independent state populated by a fetch — they're derived on every render from the current query and a `suggestionsVisible` flag that `handleChange` sets to `newValue.length > 2` on every keystroke. Clearing the input (or shrinking the query back to the threshold) now hides the dropdown immediately, with no stale state left behind to render. Covered by `SearchBar.test.jsx > should hide the suggestions once the query is cleared back to the threshold (issue #19, fixed)`.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/components/SearchBar.jsx:9-23` (`handleChange`)
 
 `setSuggestions` is only ever called inside the `newValue.length > 2` branch. Clearing the input back to an empty string skips that branch entirely, so whatever suggestions were showing before the clear stay rendered, now disconnected from the (empty) query in the box.
+
+</details>
 
 ## 20. Low — Dead `sortBy === "name"` branch in the sort comparators
 
@@ -346,3 +373,16 @@ export function formatVolumeInMillions(volume, decimals = 1) {
 Two distinct symptoms from the same missing validation: an `undefined` or non-numeric `volume` divides to `NaN`, and `toFixed` on `NaN` returns the string `"NaN"`, which both call sites render as `"NaNM"` (they append the `M` suffix literally in JSX). Separately, a `null` volume divides to `0` via JS's implicit coercion, so it silently formats as `"0.0"` — indistinguishable from a stock whose volume is genuinely zero, rather than one whose volume is simply missing.
 
 </details>
+
+## 22. Cosmetic — Volume and Avg Price run together with no spacing on the stock card
+
+**Where:** `src/components/StockCard.jsx:58-59` (the two `<small>` elements) and `src/App.css:205-214` (`.user-stats`)
+
+```js
+<div className="user-stats">
+  <small>Volume: {formatVolumeLabel(stock.volume)}</small>
+  <small>Avg: {avgPrice?.toFixed(2) || "Loading..."}</small>
+</div>
+```
+
+`<small>` is an inline element, and `.user-stats` sets no `display`/`gap`/margin between its children, so the two lines butt up against each other with no separator — rendering as e.g. `Volume: 7.0MAvg: 192.91` instead of two visually distinct stats. Confirmed live in the running app.

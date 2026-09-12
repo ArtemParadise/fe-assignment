@@ -1,26 +1,19 @@
 import { useState } from "react";
 
-import { generateStockData } from "../utils/mockStockApi";
-
-function SearchBar({ onSearch, placeholder }) {
+function SearchBar({ onSearch, placeholder, stocks }) {
   const [value, setValue] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
+  const [shouldShowSuggestions, setShouldShowSuggestions] = useState(false);
+
+  const suggestions = shouldShowSuggestions
+    ? stocks.filter(({ name }) => name.toLowerCase().includes(value.toLowerCase()))
+    : [];
 
   const handleChange = (e) => {
     const newValue = e.target.value;
 
     setValue(newValue);
     onSearch(newValue);
-
-    if (newValue.length > 2) {
-      generateStockData().then((data) => {
-        setSuggestions(
-          data.filter(({ name }) => {
-            return name.toLowerCase().includes(newValue.toLowerCase());
-          }),
-        );
-      });
-    }
+    setShouldShowSuggestions(newValue.length > 2);
   };
 
   const inputStyle = {
@@ -50,6 +43,7 @@ function SearchBar({ onSearch, placeholder }) {
                 onClick={() => {
                   setValue(item.name);
                   onSearch(item.name);
+                  setShouldShowSuggestions(false);
                 }}
               >
                 {item.name}

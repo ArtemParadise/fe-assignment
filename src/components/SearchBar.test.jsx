@@ -1,19 +1,14 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
-import { generateStockData } from "../utils/mockStockApi";
+import { describe, it, expect, vi } from "vitest";
 
 import SearchBar from "./SearchBar";
 
-
-// Baseline for the upcoming refactor: locks down SearchBar's current,
-// observable behavior (including its existing quirks) so a regression can
-// be told apart from a deliberate, documented improvement.
-
-vi.mock("../utils/mockStockApi", () => ({
-  generateStockData: vi.fn(),
-}));
+// Regression coverage for SearchBar's suggestions lifecycle, including the
+// fixes for issues #10, #18 and #19 (docs/known-issues.md): suggestions are
+// derived synchronously from the `stocks` prop App already loaded (no more
+// independent fetch), close on pick, and hide once the query drops back to
+// the threshold.
 
 const mockStocks = [
   { id: 1, symbol: "AAPL", name: "Apple Inc." },
@@ -25,13 +20,10 @@ function getInput() {
 }
 
 describe("SearchBar", () => {
-  beforeEach(() => {
-    generateStockData.mockReset();
-    generateStockData.mockResolvedValue(mockStocks);
-  });
-
   it("should render a text input with the given placeholder", () => {
-    render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
+    render(
+      <SearchBar onSearch={() => {}} placeholder="Search stocks..." stocks={mockStocks} />,
+    );
 
     const input = getInput();
 
@@ -41,7 +33,9 @@ describe("SearchBar", () => {
   });
 
   it("should render no suggestions list before the user types anything", () => {
-    render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
+    render(
+      <SearchBar onSearch={() => {}} placeholder="Search stocks..." stocks={mockStocks} />,
+    );
 
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
@@ -50,7 +44,9 @@ describe("SearchBar", () => {
     const user = userEvent.setup();
     const onSearch = vi.fn();
 
-    render(<SearchBar onSearch={onSearch} placeholder="Search stocks..." />);
+    render(
+      <SearchBar onSearch={onSearch} placeholder="Search stocks..." stocks={mockStocks} />,
+    );
 
     await user.type(getInput(), "am");
 
@@ -62,7 +58,9 @@ describe("SearchBar", () => {
   it("should update the input's own value as the user types", async () => {
     const user = userEvent.setup();
 
-    render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
+    render(
+      <SearchBar onSearch={() => {}} placeholder="Search stocks..." stocks={mockStocks} />,
+    );
 
     await user.type(getInput(), "amaz");
 
@@ -73,7 +71,9 @@ describe("SearchBar", () => {
     const user = userEvent.setup();
     const onSearch = vi.fn();
 
-    render(<SearchBar onSearch={onSearch} placeholder="Search stocks..." />);
+    render(
+      <SearchBar onSearch={onSearch} placeholder="Search stocks..." stocks={mockStocks} />,
+    );
 
     await user.type(getInput(), "am");
     await user.clear(getInput());
@@ -81,87 +81,97 @@ describe("SearchBar", () => {
     expect(onSearch).toHaveBeenLastCalledWith("");
   });
 
-  it("should not fetch suggestions while the query is 2 characters or fewer", async () => {
+  it("should not show suggestions while the query is 2 characters or fewer", async () => {
     const user = userEvent.setup();
 
-    render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
+    render(
+      <SearchBar onSearch={() => {}} placeholder="Search stocks..." stocks={mockStocks} />,
+    );
 
     await user.type(getInput(), "am");
 
-    expect(generateStockData).not.toHaveBeenCalled();
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 
-  it("should fetch and render matching suggestions once the query exceeds 2 characters", async () => {
-    const user = userEvent.setup();
+  it("should render matching suggestions the instant the query exceeds 2 characters, straight from the stocks prop (issue #10, fixed)", () => {
+    render(
+      <SearchBar onSearch={() => {}} placeholder="Search stocks..." stocks={mockStocks} />,
+    );
 
-    render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
+    // fireEvent, not userEvent: the assertion below runs before any
+    // microtask could flush, so this only passes if the suggestion came
+    // straight from the `stocks` prop already in memory - proving there is
+    // no fetch of SearchBar's own in between.
+    fireEvent.change(getInput(), { target: { value: "ama" } });
 
-    await user.type(getInput(), "ama");
-
-    expect(generateStockData).toHaveBeenCalled();
-    expect(await screen.findByText("Amazing Company")).toBeInTheDocument();
+    expect(screen.getByText("Amazing Company")).toBeInTheDocument();
     expect(screen.queryByText("Apple Inc.")).not.toBeInTheDocument();
   });
 
   it("should match suggestions case-insensitively against the company name", async () => {
     const user = userEvent.setup();
 
-    render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
+    render(
+      <SearchBar onSearch={() => {}} placeholder="Search stocks..." stocks={mockStocks} />,
+    );
 
     await user.type(getInput(), "AMA");
 
-    expect(await screen.findByText("Amazing Company")).toBeInTheDocument();
+    expect(screen.getByText("Amazing Company")).toBeInTheDocument();
   });
 
   it("should match suggestions only against the company name, not the ticker symbol (existing behavior)", async () => {
     const user = userEvent.setup();
 
-    render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
+    render(
+      <SearchBar onSearch={() => {}} placeholder="Search stocks..." stocks={mockStocks} />,
+    );
 
     // "aaaa" is Amazing Company's symbol (AAAA), but is not a substring of
-    // its name "Amazing Company" - so today it produces zero suggestions.
+    // its name "Amazing Company" - so this produces zero suggestions.
     await user.type(getInput(), "aaaa");
-    await waitFor(() => expect(generateStockData).toHaveBeenCalled());
 
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 
-  it("should re-fetch suggestions on every keystroke past the threshold, once per keystroke (existing behavior, duplicates App's own fetch)", async () => {
+  it("should recompute suggestions against the stocks prop on every keystroke past the threshold", async () => {
     const user = userEvent.setup();
 
-    render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
+    render(
+      <SearchBar onSearch={() => {}} placeholder="Search stocks..." stocks={mockStocks} />,
+    );
 
     await user.type(getInput(), "amazi");
 
-    // "ama", "amaz", "amazi" each independently call generateStockData.
-    expect(generateStockData).toHaveBeenCalledTimes(3);
+    expect(screen.getByText("Amazing Company")).toBeInTheDocument();
   });
 
   it("should render one clickable suggestion per matching stock", async () => {
-    generateStockData.mockResolvedValue([
+    const stocks = [
       { id: 1, symbol: "AAPL", name: "Apple Inc." },
       { id: 2, symbol: "AMZN", name: "Amazon.com Inc." },
-    ]);
+    ];
 
     const user = userEvent.setup();
 
-    render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
+    render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." stocks={stocks} />);
 
     await user.type(getInput(), "inc");
 
-    expect(await screen.findAllByRole("listitem")).toHaveLength(2);
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
   });
 
   it("should fill the input and report the suggestion through onSearch when clicked", async () => {
     const user = userEvent.setup();
     const onSearch = vi.fn();
 
-    render(<SearchBar onSearch={onSearch} placeholder="Search stocks..." />);
+    render(
+      <SearchBar onSearch={onSearch} placeholder="Search stocks..." stocks={mockStocks} />,
+    );
 
     await user.type(getInput(), "ama");
 
-    const suggestion = await screen.findByText("Amazing Company");
+    const suggestion = screen.getByText("Amazing Company");
 
     await user.click(suggestion);
 
@@ -169,29 +179,33 @@ describe("SearchBar", () => {
     expect(onSearch).toHaveBeenLastCalledWith("Amazing Company");
   });
 
-  it("should leave the suggestions list open after a suggestion is clicked (existing behavior)", async () => {
+  it("should close the suggestions list after a suggestion is clicked (issue #18, fixed)", async () => {
     const user = userEvent.setup();
 
-    render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
+    render(
+      <SearchBar onSearch={() => {}} placeholder="Search stocks..." stocks={mockStocks} />,
+    );
 
     await user.type(getInput(), "ama");
 
-    const suggestion = await screen.findByText("Amazing Company");
+    const suggestion = screen.getByText("Amazing Company");
 
     await user.click(suggestion);
 
-    expect(screen.getByText("Amazing Company")).toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 
-  it("should keep showing the last suggestions after the query is cleared, instead of hiding them (existing behavior)", async () => {
+  it("should hide the suggestions once the query is cleared back to the threshold (issue #19, fixed)", async () => {
     const user = userEvent.setup();
 
-    render(<SearchBar onSearch={() => {}} placeholder="Search stocks..." />);
+    render(
+      <SearchBar onSearch={() => {}} placeholder="Search stocks..." stocks={mockStocks} />,
+    );
 
     await user.type(getInput(), "ama");
-    await screen.findByText("Amazing Company");
+    screen.getByText("Amazing Company");
     await user.clear(getInput());
 
-    expect(screen.getByText("Amazing Company")).toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 });

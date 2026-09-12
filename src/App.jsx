@@ -29,7 +29,7 @@ function App() {
     <div className="App" style={config}>
       <h1>Stock Trading Dashboard</h1>
 
-      <SearchBar onSearch={handleSearch} placeholder="Search stocks..." />
+      <SearchBar onSearch={handleSearch} placeholder="Search stocks..." stocks={stocks} />
 
       <StockList
         stocks={stocks}
