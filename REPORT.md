@@ -143,7 +143,7 @@ Which makes the UI-visible changes the ones that need an argument. Every one of 
 
 ## Ideas I rejected
 
-**Splitting components and hooks into nested folders.** Right now it's 5 components and 7 hooks in a flat structure (`components/`, `hooks/`), and that reads at a glance. Nesting pays off when there are dozens of files and the flat list turns into a wall — here it's the opposite: it would add levels of navigation and imports for the sake of a structure there isn't yet volume for.
+**Splitting components and hooks into nested folders.** Right now it's 7 components and 7 hooks in a flat structure (`components/`, `hooks/`), and that reads at a glance. Nesting pays off when there are dozens of files and the flat list turns into a wall — here it's the opposite: it would add levels of navigation and imports for the sake of a structure there isn't yet volume for.
 
 **Moving to TypeScript.** The value shows up at scale: a growing codebase, several developers, complex contracts between modules — that's when types pay for themselves. Within this assignment there isn't a single bug caused by the absence of types (every issue found is logic, effects, or CSS — not a type mismatch), so it'd be overhead without a return.
 
