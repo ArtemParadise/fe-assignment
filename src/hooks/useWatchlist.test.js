@@ -3,11 +3,6 @@ import { describe, it, expect, beforeEach } from "vitest";
 
 import { useWatchlist } from "./useWatchlist";
 
-// Unit-level counterpart to the watchlist behavior locked down through the
-// DOM in StockList.test.jsx (star toggling, unaffected sibling stocks, and
-// the issue #3 persistence fix). Those stay in place as the end-to-end
-// regression check; these test the extracted hook's own contract directly.
-
 describe("useWatchlist", () => {
   beforeEach(() => {
     localStorage.clear();

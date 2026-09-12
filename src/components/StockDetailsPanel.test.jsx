@@ -4,12 +4,6 @@ import { describe, it, expect, vi } from "vitest";
 
 import StockDetailsPanel from "./StockDetailsPanel";
 
-// Moved from StockList.test.jsx as part of extracting StockDetailsPanel:
-// this assertion is purely about what StockDetailsPanel renders given its
-// `details` prop, so it's driven directly against the component. Running
-// it here after the extraction is what confirms the extraction didn't
-// change StockDetailsPanel's observable output.
-
 const aaplDetails = {
   symbol: "AAPL",
   name: "AAPL Corporation",
@@ -26,6 +20,34 @@ const aaplDetails = {
 };
 
 describe("StockDetailsPanel", () => {
+  it("should show a loading indicator while details are pending", () => {
+    render(
+      <StockDetailsPanel
+        loading={true}
+        details={null}
+        priceHistory={null}
+        priceHistoryLoading={false}
+        onLoadPriceHistory={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Loading stock details...")).toBeInTheDocument();
+  });
+
+  it("should hide the loading indicator once details have resolved", () => {
+    render(
+      <StockDetailsPanel
+        loading={false}
+        details={aaplDetails}
+        priceHistory={null}
+        priceHistoryLoading={false}
+        onLoadPriceHistory={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Loading stock details...")).not.toBeInTheDocument();
+  });
+
   it("should render every field of the resolved details panel, correctly formatted", () => {
     render(
       <StockDetailsPanel

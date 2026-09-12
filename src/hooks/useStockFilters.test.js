@@ -3,11 +3,6 @@ import { describe, it, expect } from "vitest";
 
 import { useStockFilters } from "./useStockFilters";
 
-// Unit-level counterpart to the search/sector filtering behavior locked
-// down through the DOM in StockList.test.jsx. Those stay in place as the
-// end-to-end regression check; these test the extracted hook's own
-// filtering logic directly.
-
 const stocks = [
   {
     id: 5,

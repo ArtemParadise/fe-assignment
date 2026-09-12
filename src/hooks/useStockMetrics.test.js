@@ -5,11 +5,6 @@ import { fetchHistoricalPrices } from "../utils/mockStockApi";
 
 import { useStockMetrics } from "./useStockMetrics";
 
-// Unit-level counterpart to the avg-price loading/resolved behavior locked
-// down through the DOM in StockList.test.jsx. Those stay in place as the
-// end-to-end regression check (fetch -> hook -> StockCard rendering); these
-// test the extracted hook's own computation directly.
-
 vi.mock("../utils/mockStockApi", () => ({
   fetchHistoricalPrices: vi.fn(),
 }));

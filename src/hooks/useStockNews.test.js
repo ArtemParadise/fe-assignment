@@ -5,11 +5,6 @@ import { fetchStockNews } from "../utils/mockStockApi";
 
 import { useStockNews } from "./useStockNews";
 
-// Unit-level counterpart to the news-panel behavior locked down through the
-// DOM in StockList.test.jsx (expand-on-click, loading state, per-symbol
-// caching). Those stay in place as the end-to-end regression check; these
-// test the extracted hook's own state management directly.
-
 vi.mock("../utils/mockStockApi", () => ({
   fetchStockNews: vi.fn(),
 }));

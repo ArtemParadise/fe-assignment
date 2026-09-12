@@ -6,12 +6,6 @@ import { fetchStockDetails, fetchHistoricalPrices } from "../utils/mockStockApi"
 
 import { useStockDetails } from "./useStockDetails";
 
-// Unit-level counterpart to the details/price-history behavior locked down
-// through the DOM in StockList.test.jsx (loading indicator, the issue #4
-// race-condition fix, the issue #17 error logging, and the issue #16 price
-// history log). Those stay in place as the end-to-end regression check;
-// these test the extracted hook's own state management directly.
-
 vi.mock("../utils/mockStockApi", () => ({
   fetchStockDetails: vi.fn(),
   fetchHistoricalPrices: vi.fn(),

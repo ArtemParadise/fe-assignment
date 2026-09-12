@@ -1,13 +1,8 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 
 import StockCard from "./StockCard";
-
-// Moved from StockList.test.jsx as part of extracting StockCard: these
-// assertions are purely about what StockCard renders given its props, so
-// they're driven directly against the component instead of through
-// StockList + mocked API calls. Running them here after the extraction is
-// what confirms the extraction didn't change StockCard's observable output.
 
 const aapl = {
   id: 1,
@@ -47,6 +42,10 @@ function renderCard(overrides = {}) {
   return props;
 }
 
+function getCard() {
+  return screen.getByRole("heading", { level: 3 }).closest(".user-card");
+}
+
 describe("StockCard", () => {
   it("should render the company name, formatted price, sector, and volume in millions", () => {
     renderCard();
@@ -84,5 +83,54 @@ describe("StockCard", () => {
     expect(screen.getByText("Three")).toBeInTheDocument();
     expect(screen.queryByText("Four")).not.toBeInTheDocument();
     expect(screen.getByText(`${"a".repeat(80)}...`)).toBeInTheDocument();
+  });
+
+  it("should show 'Loading...' for avg price until it is provided", () => {
+    renderCard({ avgPrice: undefined });
+
+    expect(screen.getByText("Avg: Loading...")).toBeInTheDocument();
+  });
+
+  it("should show the formatted avg price once it is provided", () => {
+    renderCard({ avgPrice: 150 });
+
+    expect(screen.getByText("Avg: 150.00")).toBeInTheDocument();
+  });
+
+  it("should render an empty star and an 'Add ... to watchlist' label by default", () => {
+    renderCard({ isWatchlisted: false });
+
+    expect(
+      screen.getByRole("button", { name: "Add AAPL to watchlist" }),
+    ).toHaveTextContent("☆");
+  });
+
+  it("should render a filled star and a 'Remove ... from watchlist' label when watchlisted", () => {
+    renderCard({ isWatchlisted: true });
+
+    expect(
+      screen.getByRole("button", { name: "Remove AAPL from watchlist" }),
+    ).toHaveTextContent("★");
+  });
+
+  it("should call onToggleWatchlist when the star button is clicked", async () => {
+    const user = userEvent.setup();
+    const { onToggleWatchlist } = renderCard();
+
+    await user.click(screen.getByRole("button", { name: "Add AAPL to watchlist" }));
+
+    expect(onToggleWatchlist).toHaveBeenCalledTimes(1);
+  });
+
+  it("should add a 'favorite' class to a watchlisted card", () => {
+    renderCard({ isWatchlisted: true });
+
+    expect(getCard()).toHaveClass("favorite");
+  });
+
+  it("should bold the change percentage on a watchlisted card", () => {
+    renderCard({ isWatchlisted: true });
+
+    expect(screen.getByText("+2.30%")).toHaveStyle({ fontWeight: "bold" });
   });
 });
