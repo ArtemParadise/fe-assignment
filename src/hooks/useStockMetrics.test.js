@@ -58,7 +58,7 @@ describe("useStockMetrics", () => {
     });
   });
 
-  it("should leave a stock's metrics absent and log if its request rejects (issue #26, fixed)", async () => {
+  it("should record a terminal error state and log if a stock's request rejects (issue #26, fixed)", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
     fetchHistoricalPrices.mockImplementation((symbol) =>
@@ -76,7 +76,7 @@ describe("useStockMetrics", () => {
 
     await waitFor(() => expect(result.current[5]?.avgPrice).toBe(10));
 
-    expect(result.current[1]).toBeUndefined();
+    expect(result.current[1]).toEqual({ error: true });
     expect(consoleError).toHaveBeenCalled();
 
     consoleError.mockRestore();

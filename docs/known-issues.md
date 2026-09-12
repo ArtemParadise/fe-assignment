@@ -418,9 +418,9 @@ Fixes carry a **Tests** line naming the regression test that pins them. Those te
 
 **Impact:** A failed request produced an unhandled promise rejection and left the UI on a loading state that could never clear — "Avg: Loading..." on the card, "Loading news..." in the panel, "Loading price history..." under the details. The same failure shape as #17, in three more places.
 
-**Solution:** Each chain now has a `.catch()` that logs via `console.error`. `useStockNews` also records an empty list for the failed symbol so the card can say there's no news rather than sit on a loading message (see [#27](#issue-27-stockcard-treats-an-empty-news-list-as-still-loading)); `loadPriceHistory` keeps its existing `.finally()`, which already cleared the loading flag on both paths.
+**Solution:** Each chain now has a `.catch()` that logs via `console.error`. `useStockNews` also records an empty list for the failed symbol so the card can say there's no news rather than sit on a loading message (see [#27](#issue-27-stockcard-treats-an-empty-news-list-as-still-loading)); `useStockMetrics` records a terminal `{ error: true }` entry for the failed stock so `StockCard` renders "Avg: N/A" instead of retaining "Avg: Loading..." forever; `loadPriceHistory` keeps its existing `.finally()`, which already cleared the loading flag on both paths.
 
-**Tests:** `useStockNews.test.js > should record an empty list if the request rejects, ending the loading state (issue #26, fixed)`, `useStockMetrics.test.js > should leave a stock's metrics absent and log if its request rejects (issue #26, fixed)`, and `useStockDetails.test.js > should log and clear the loading flag if the price-history request rejects (issue #26, fixed)`.
+**Tests:** `useStockNews.test.js > should record an empty list if the request rejects, ending the loading state (issue #26, fixed)`, `useStockMetrics.test.js > should record a terminal error state and log if a stock's request rejects (issue #26, fixed)`, `StockCard.test.jsx > should show 'N/A' for avg price if the metrics request failed (issue #26, fixed)`, `StockList.test.jsx > passes a failed metrics entry through so the card shows 'N/A' instead of loading forever (issue #26, fixed)`, and `useStockDetails.test.js > should log and clear the loading flag if the price-history request rejects (issue #26, fixed)`.
 
 ---
 

@@ -51,6 +51,7 @@ function StockList({ stocks, searchTerm }) {
               stock={stock}
               isWatchlisted={watchlist.includes(stock.id)}
               avgPrice={stockMetrics[stock.id]?.avgPrice}
+              avgPriceFailed={Boolean(stockMetrics[stock.id]?.error)}
               news={stockNews[stock.symbol]}
               isExpanded={expandedStock === stock.symbol}
               onToggleWatchlist={() => toggleWatchlist(stock.id)}

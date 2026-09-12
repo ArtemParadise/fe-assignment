@@ -27,7 +27,7 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Vite dev server |
 | `npm run build` | Production build |
 | `npm run preview` | Serve the production build |
-| `npm test` | Run the suite once (152 tests) |
+| `npm test` | Run the suite once (154 tests) |
 | `npm run test:watch` | Watch mode |
 | `npm run test:coverage` | Coverage report |
 | `npm run lint` | ESLint |
@@ -69,7 +69,7 @@ src/
 Every change runs through the same checks locally and in CI:
 
 - **ESLint** (flat config) — `react`, `react-hooks`, `jsx-a11y`, `import/order`, plus `no-unused-vars` and `no-console`.
-- **Vitest + Testing Library** — 152 tests. Fixed bugs carry a regression test tagged with their issue number, so `grep "issue #"` maps tests back to [docs/known-issues.md](./docs/known-issues.md).
+- **Vitest + Testing Library** — 154 tests. Fixed bugs carry a regression test tagged with their issue number, so `grep "issue #"` maps tests back to [docs/known-issues.md](./docs/known-issues.md).
 - **Husky** — `pre-commit` runs lint-staged, `pre-push` runs the suite.
 - **GitHub Actions** — lint, tests, and build on every PR.
 - **CodeRabbit** — automated review on every PR.

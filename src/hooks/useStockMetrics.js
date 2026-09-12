@@ -20,8 +20,11 @@ export function useStockMetrics(stocks) {
           }));
         })
         .catch((err) => {
-          // The entry stays absent, which the card already renders as "Avg: Loading...".
           console.error(`Failed to load metrics for ${stock.symbol}`, err);
+          setStockMetrics((prev) => ({
+            ...prev,
+            [stock.id]: { error: true },
+          }));
         });
     });
   }, [stocks]);

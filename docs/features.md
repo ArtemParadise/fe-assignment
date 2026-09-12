@@ -75,7 +75,7 @@ A button inside the details panel, "Load Price History", fetches 31 days of mock
 
 If a render error escapes anywhere in the tree, the page shows a "Something went wrong." panel with a reload button instead of going blank ([#24](./known-issues.md#issue-24-no-error-boundary-anywhere-in-the-tree)).
 
-Failed background requests no longer strand the UI on a loading message: a stock whose metrics fail keeps showing "Avg: Loading...", news falls back to "No news available.", and the price-history indicator clears ([#26](./known-issues.md#issue-26-unhandled-promise-rejections-in-three-fetches)).
+Failed background requests no longer strand the UI on a loading message: a stock whose metrics fail shows "Avg: N/A", news falls back to "No news available.", and the price-history indicator clears ([#26](./known-issues.md#issue-26-unhandled-promise-rejections-in-three-fetches)).
 
 ## Responsiveness
 

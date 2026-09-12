@@ -6,10 +6,17 @@ const getWatchlistLabel = (symbol, isWatchlisted) => isWatchlisted
   ? `Remove ${symbol} from watchlist`
   : `Add ${symbol} to watchlist`;
 
+const getAvgPriceLabel = (avgPrice, avgPriceFailed) => {
+  if (avgPrice !== undefined) return avgPrice.toFixed(2);
+
+  return avgPriceFailed ? "N/A" : "Loading...";
+};
+
 function StockCard({
   stock,
   isWatchlisted,
   avgPrice,
+  avgPriceFailed,
   news,
   isExpanded,
   onToggleWatchlist,
@@ -58,7 +65,7 @@ function StockCard({
 
       <div className="user-stats">
         <small>Volume: {formatVolumeLabel(stock.volume)}</small>
-        <small>Avg: {avgPrice?.toFixed(2) || "Loading..."}</small>
+        <small>Avg: {getAvgPriceLabel(avgPrice, avgPriceFailed)}</small>
       </div>
 
       <div className="user-actions">

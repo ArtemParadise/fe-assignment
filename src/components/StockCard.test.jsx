@@ -92,7 +92,7 @@ describe("StockCard", () => {
   });
 
   it("should show 'Loading...' for avg price until it is provided", () => {
-    renderCard({ avgPrice: undefined });
+    renderCard({ avgPrice: undefined, avgPriceFailed: false });
 
     expect(screen.getByText("Avg: Loading...")).toBeInTheDocument();
   });
@@ -101,6 +101,12 @@ describe("StockCard", () => {
     renderCard({ avgPrice: 150 });
 
     expect(screen.getByText("Avg: 150.00")).toBeInTheDocument();
+  });
+
+  it("should show 'N/A' for avg price if the metrics request failed (issue #26, fixed)", () => {
+    renderCard({ avgPrice: undefined, avgPriceFailed: true });
+
+    expect(screen.getByText("Avg: N/A")).toBeInTheDocument();
   });
 
   it("should render an empty star and an 'Add ... to watchlist' label by default", () => {

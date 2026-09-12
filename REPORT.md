@@ -99,9 +99,9 @@ When the refactoring settled, I audited the result instead of calling it done. N
 
 **Some of my own fixes had been applied in one place and missed in another.** `SearchBar` was still keying suggestions by index, which #11 fixed in `StockList`; `StockCard` was still reading an empty news list as "still loading", the other half of #2. Both fixed — and the news panel moved into its own `StockNews` component on the way, which dropped a prop and a piece of state rather than adding any. Fixing a bug isn't done until I've grepped for the same shape elsewhere.
 
-**Two fixes I wrote and then took back out.** `useWatchlist` builds its next list from the render closure, so two toggles in one tick would drop the first; `useClickOutside` re-subscribes its listener on every render. Both have a textbook fix — a functional updater, a handler in a ref — and I implemented both before reverting. The updater forces persistence into an effect that writes to `localStorage` on every mount; the ref costs a second effect on every render to save two cheap DOM calls.
+**Two optimisations I wrote and then took back out.** `useWatchlist` builds its next list from the render closure, so two toggles in one tick would drop the first; `useClickOutside` re-subscribes its listener on every render. Both have a textbook fix — a functional updater, a handler held in a ref — and I implemented both before reverting. The updater forces persistence into an effect that writes to `localStorage` on every mount; the ref costs a second effect on every render to save two cheap DOM calls.
 
-Same criterion both times: the fix charges every render or page load, and the bug it guards against isn't reachable through the UI. Written up as [#31](./docs/known-issues.md#issue-31-usewatchlist-computes-the-next-list-from-a-stale-closure-not-changed) and [#29](./docs/known-issues.md#issue-29-useclickoutside-dereferences-a-possibly-null-ref) rather than quietly dropped.
+Same criterion both times: the fix charges every render or page load, and the bug it guards against isn't reachable through the UI. Both are written up rather than quietly dropped — [#31](./docs/known-issues.md#issue-31-usewatchlist-computes-the-next-list-from-a-stale-closure-not-changed), which stays open, and the dropped half of [#29](./docs/known-issues.md#issue-29-useclickoutside-dereferences-a-possibly-null-ref). Only the re-subscription was reverted there: `#29`'s actual defect is an unguarded `ref.current` that throws if the event fires while the ref holds no element, and that guard shipped.
 
 I also turned on `StrictMode`, which would have surfaced some of this earlier.
 
@@ -167,7 +167,7 @@ At real scale — a live API instead of a mock, hundreds of rows instead of ten 
 
 ## Where things stand
 
-- 152 tests, 18 files, all passing. 99.8% statement coverage.
+- 154 tests, 18 files, all passing. 99.8% statement coverage.
 - `npm run lint` clean.
 - Lint, tests, and build run in CI on every PR; lint-staged on pre-commit, full suite on pre-push.
 - 30 of 32 known issues fixed; the one left open ([#5](./docs/known-issues.md#issue-5-details-panel-values-are-unrelated-to-the-summary-card-for-the-same-symbol)) is a property of the mock data generator, not the app.

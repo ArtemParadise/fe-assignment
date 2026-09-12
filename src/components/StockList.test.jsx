@@ -194,6 +194,15 @@ describe("StockList", () => {
     expect(within(cardFor("TSLA")).getByText("Avg: Loading...")).toBeInTheDocument();
   });
 
+  it("passes a failed metrics entry through so the card shows 'N/A' instead of loading forever (issue #26, fixed)", () => {
+    setupHooks({ metrics: { 5: { error: true } } });
+
+    render(<StockList stocks={stocks} searchTerm="" />);
+
+    expect(within(cardFor("TSLA")).getByText("Avg: N/A")).toBeInTheDocument();
+    expect(within(cardFor("AAPL")).getByText("Avg: Loading...")).toBeInTheDocument();
+  });
+
   it("passes each stock's news state to its card and requests news for the clicked stock", async () => {
     const loadStockNews = vi.fn();
 
