@@ -216,6 +216,28 @@ describe("StockList", () => {
     expect(loadStockNews).toHaveBeenCalledWith("TSLA");
   });
 
+  it("passes an unloaded news entry through as undefined, so the card can tell loading from empty (issue #27, fixed)", () => {
+    setupHooks({ news: { expandedStock: "AAPL", stockNews: {} } });
+
+    render(<StockList stocks={stocks} searchTerm="" />);
+
+    expect(within(cardFor("AAPL")).getByText("Loading news...")).toBeInTheDocument();
+    expect(
+      within(cardFor("AAPL")).queryByText("No news available."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("passes an empty news entry through as empty, not as still loading (issue #27, fixed)", () => {
+    setupHooks({ news: { expandedStock: "AAPL", stockNews: { AAPL: [] } } });
+
+    render(<StockList stocks={stocks} searchTerm="" />);
+
+    expect(within(cardFor("AAPL")).getByText("No news available.")).toBeInTheDocument();
+    expect(
+      within(cardFor("AAPL")).queryByText("Loading news..."),
+    ).not.toBeInTheDocument();
+  });
+
   it("requests details for the clicked stock and renders the resolved panel from useStockDetails", async () => {
     const viewStockDetails = vi.fn();
 
