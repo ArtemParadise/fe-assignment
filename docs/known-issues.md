@@ -61,13 +61,14 @@ useEffect(() => {
 }, [expandedStock]);
 ```
 
-This mutates the existing `stockNews` object in place, then calls `setStockNews` with that *same* object reference. React bails out of re-rendering for a state update when the new value is reference-equal (`Object.is`) to the current value — so this particular `setStockNews` call does not, by itself, cause `StockList` to re-render with the new news data.
+This mutates the existing `stockNews` object in place, then calls `setStockNews` with that _same_ object reference. React bails out of re-rendering for a state update when the new value is reference-equal (`Object.is`) to the current value — so this particular `setStockNews` call does not, by itself, cause `StockList` to re-render with the new news data.
 
 **Observed effect is timing-dependent:**
-- Clicked "Show News" in isolation (no other pending state updates): the card stayed on "Loading news..." indefinitely — the data had actually arrived (confirmed the object was mutated) but nothing triggered a re-render to display it.
-- Clicked "Show News" while the unrelated `stockMetrics` effect (see issue #4) was still mid-flight, resolving stocks one by one: the news content *did* appear, because one of those unrelated `setStockMetrics` updates happened to trigger a re-render after the mutation had already landed.
 
-So the panel's reliability depended entirely on whether some *other* state update happened to fire afterward — it wasn't deterministic from the user's perspective.
+- Clicked "Show News" in isolation (no other pending state updates): the card stayed on "Loading news..." indefinitely — the data had actually arrived (confirmed the object was mutated) but nothing triggered a re-render to display it.
+- Clicked "Show News" while the unrelated `stockMetrics` effect (see issue #4) was still mid-flight, resolving stocks one by one: the news content _did_ appear, because one of those unrelated `setStockMetrics` updates happened to trigger a re-render after the mutation had already landed.
+
+So the panel's reliability depended entirely on whether some _other_ state update happened to fire afterward — it wasn't deterministic from the user's perspective.
 
 </details>
 
@@ -76,6 +77,7 @@ So the panel's reliability depended entirely on whether some *other* state updat
 **Where:** `src/hooks/useWatchlist.js` (moved here from `StockList.jsx` during the hooks decomposition, unchanged) — `watchlist` is a plain `useState([])`; there is no `localStorage` reference anywhere in the hook (confirmed with a full-file read) or the rest of `src/`.
 
 The root [`README.md`](../README.md) lists "Watchlist functionality with localStorage" under Application Features. In the running app:
+
 - Toggling a star, then reloading the page, clears every star.
 - `window.localStorage.length` is `0` immediately after toggling a star and checking in-browser.
 
@@ -100,7 +102,7 @@ export const fetchStockDetails = (symbol) => {
     ...
 ```
 
-Every click on "View Details" started a new `fetchStockDetails` call; the effect didn't track or cancel the previous in-flight request. Because each response is delayed by a random 500–2500ms, clicking stock A and then quickly clicking stock B could result in A's slower response resolving *after* B's and overwriting the panel — so the panel could end up showing details for a stock other than the one currently selected. (The source comment above calls this out explicitly as intentional.)
+Every click on "View Details" started a new `fetchStockDetails` call; the effect didn't track or cancel the previous in-flight request. Because each response is delayed by a random 500–2500ms, clicking stock A and then quickly clicking stock B could result in A's slower response resolving _after_ B's and overwriting the panel — so the panel could end up showing details for a stock other than the one currently selected. (The source comment above calls this out explicitly as intentional.)
 
 </details>
 
@@ -142,9 +144,9 @@ At a 400px viewport, `document.documentElement.scrollWidth` measures 528px again
 **Where:** `src/components/StockList.jsx:154-157`
 
 ```js
-{uniqueSectors.map((sector) => (
-  <option value={sector}>{sector}</option>
-))}
+{
+  uniqueSectors.map((sector) => <option value={sector}>{sector}</option>);
+}
 ```
 
 No `key` is provided, which React flags on every render:
@@ -166,11 +168,20 @@ Warning: Each child in a list should have a unique "key" prop.
 - `filteredStocks` (`App.jsx:22-26`) is computed and passed to `<StockList filteredStocks={filteredStocks}>` (`App.jsx:36`), but `StockList`'s signature (`src/components/StockList.jsx:11`) only destructures `{ stocks, searchTerm }` — the prop is ignored, and `StockList` recomputes an equivalent list internally from `searchTerm` via `useStockFilters` (`src/hooks/useStockFilters.js`). Two implementations of the same filter still exist; only one is live.
 - `config = { theme: "dark", lang: "en" }` (`App.jsx:16`) is applied as `style={config}` on the root `<div>` (`App.jsx:29`). `theme` and `lang` aren't real CSS properties, so this still has no visual effect — reads like an abandoned theming attempt.
 
-## 10. Low — `SearchBar` duplicates `App`'s data fetch
+## 10. Low — ~~`SearchBar` duplicates `App`'s data fetch~~ (Fixed)
+
+**Where:** `src/components/SearchBar.jsx`
+
+**Status: Fixed.** `SearchBar` now takes the already-loaded stock list as a `stocks` prop (passed down from `App`, `src/App.jsx`) and filters it directly to build suggestions, instead of calling `generateStockData()` itself. There is no fetch left in `SearchBar` at all — suggestions are derived synchronously on every keystroke past the threshold. Covered by `SearchBar.test.jsx > should render matching suggestions the instant the query exceeds 2 characters, straight from the stocks prop (issue #10, fixed)`.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/components/SearchBar.jsx:14-22`
 
 Rather than receiving the stock list `App` already loaded, `SearchBar` calls `generateStockData()` itself every time the query passes 3 characters, to build its typeahead suggestions. This is a second, independent copy of the same mock "network" call and data source.
+
+</details>
 
 ## 11. Low — ~~List keyed by array index~~ (Fixed)
 
@@ -239,7 +250,7 @@ const loadStockNews = (symbol) => {
 </button>
 ```
 
-The button's label is conditional on `isExpanded`, but its `onClick` always calls `loadStockNews(stock.symbol)` — there is no branch that ever calls `setExpandedStock(null)`. Once a card's news panel is expanded, clicking "Hide News" just calls `setExpandedStock` with the *same* symbol again (a no-op state update), so the panel never closes and the button stays reading "Hide News" for the rest of the session. Covered by `src/components/StockList.test.jsx > news panel > should not collapse the panel when 'Hide News' is clicked`.
+The button's label is conditional on `isExpanded`, but its `onClick` always calls `loadStockNews(stock.symbol)` — there is no branch that ever calls `setExpandedStock(null)`. Once a card's news panel is expanded, clicking "Hide News" just calls `setExpandedStock` with the _same_ symbol again (a no-op state update), so the panel never closes and the button stays reading "Hide News" for the rest of the session. Covered by `src/components/StockList.test.jsx > news panel > should not collapse the panel when 'Hide News' is clicked`.
 
 </details>
 
@@ -287,7 +298,14 @@ The `.catch` only logs the error — it never calls `setLoading(false)`. If `fet
 
 </details>
 
-## 18. Low — `SearchBar`'s suggestions dropdown never closes after picking a suggestion
+## 18. Low — ~~`SearchBar`'s suggestions dropdown never closes after picking a suggestion~~ (Fixed)
+
+**Where:** `src/components/SearchBar.jsx`
+
+**Status: Fixed.** Picking a suggestion now calls `setSuggestionsVisible(false)` alongside updating the input and reporting the value via `onSearch`, so the dropdown closes immediately after a selection. Covered by `SearchBar.test.jsx > should close the suggestions list after a suggestion is clicked (issue #18, fixed)`.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/components/SearchBar.jsx:48-55`
 
@@ -300,11 +318,22 @@ onClick={() => {
 
 Selecting a suggestion updates the input and reports the value via `onSearch`, but never calls `setSuggestions([])`. The (now stale) suggestions list stays open underneath the input after a selection.
 
-## 19. Low — Stale suggestions stay visible after the search box is cleared
+</details>
+
+## 19. Low — ~~Stale suggestions stay visible after the search box is cleared~~ (Fixed)
+
+**Where:** `src/components/SearchBar.jsx` (`handleChange`)
+
+**Status: Fixed.** As part of the same fix as issues #10 and #18, suggestions are no longer independent state populated by a fetch — they're derived on every render from the current query and a `suggestionsVisible` flag that `handleChange` sets to `newValue.length > 2` on every keystroke. Clearing the input (or shrinking the query back to the threshold) now hides the dropdown immediately, with no stale state left behind to render. Covered by `SearchBar.test.jsx > should hide the suggestions once the query is cleared back to the threshold (issue #19, fixed)`.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/components/SearchBar.jsx:9-23` (`handleChange`)
 
 `setSuggestions` is only ever called inside the `newValue.length > 2` branch. Clearing the input back to an empty string skips that branch entirely, so whatever suggestions were showing before the clear stay rendered, now disconnected from the (empty) query in the box.
+
+</details>
 
 ## 20. Low — Dead `sortBy === "name"` branch in the sort comparators
 
@@ -346,3 +375,24 @@ export function formatVolumeInMillions(volume, decimals = 1) {
 Two distinct symptoms from the same missing validation: an `undefined` or non-numeric `volume` divides to `NaN`, and `toFixed` on `NaN` returns the string `"NaN"`, which both call sites render as `"NaNM"` (they append the `M` suffix literally in JSX). Separately, a `null` volume divides to `0` via JS's implicit coercion, so it silently formats as `"0.0"` — indistinguishable from a stock whose volume is genuinely zero, rather than one whose volume is simply missing.
 
 </details>
+
+## 22. Cosmetic — Volume and Avg Price run together with no spacing on the stock card
+
+**Where:** `src/components/StockCard.jsx:58-59` (the two `<small>` elements) and `src/App.css:205-214` (`.user-stats`)
+
+```js
+<div className="user-stats">
+  <small>Volume: {formatVolumeLabel(stock.volume)}</small>
+  <small>Avg: {avgPrice?.toFixed(2) || "Loading..."}</small>
+</div>
+```
+
+`<small>` is an inline element, and `.user-stats` sets no `display`/`gap`/margin between its children, so the two lines butt up against each other with no separator — rendering as e.g. `Volume: 7.0MAvg: 192.91` instead of two visually distinct stats. Confirmed live in the running app.
+
+## 23. Low — ~~`SearchBar`'s suggestions dropdown stayed open when clicking elsewhere on the page~~ (Fixed)
+
+**Where:** `src/components/SearchBar.jsx`
+
+Turned up while extending the suggestions-lifecycle test coverage for issues #10/#18/#19: the dropdown only ever closed when a suggestion was picked or the query dropped back to the threshold. Clicking anywhere else on the page while it was open (the stock grid, the heading, empty space) left it floating open indefinitely, disconnected from focus.
+
+**Status: Fixed.** `SearchBar` holds a `ref` on its container and passes it, together with a callback that closes the dropdown, to a new reusable `useClickOutside` hook (`src/hooks/useClickOutside.js`). The hook only attaches its `mousedown` listener on `document` while the dropdown is visible (an `enabled` argument), and removes it on cleanup; a click whose target falls outside the ref'd container invokes the callback. The query and input value are untouched — only the dropdown closes. Covered by `SearchBar.test.jsx > should close the suggestions list when clicking outside the search bar, without changing the query (issue #23, fixed)` and, at the unit level, `useClickOutside.test.js`.
