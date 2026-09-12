@@ -283,6 +283,22 @@ button:hover {
   font-weight: 600;
 }
 
+.price-history {
+  margin-top: 15px;
+  padding: 10px;
+  list-style: none;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #495057;
+}
+
+.price-history li {
+  padding: 2px 0;
+}
+
 .user-details button:hover {
   background: #f0f0f0;
   color: #764ba2;

@@ -302,6 +302,10 @@ describe("StockList", () => {
   });
 
   describe("watchlist", () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
     it("should render an empty star for every stock by default", async () => {
       await renderStockList();
 
@@ -365,14 +369,22 @@ describe("StockList", () => {
       });
     });
 
-    it("should not persist the watchlist to localStorage (known issue #3, despite README claiming it does)", async () => {
+    it("should persist the watchlist to localStorage (issue #3, fixed)", async () => {
       const user = userEvent.setup();
 
       await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Add AAPL to watchlist" }));
 
-      expect(window.localStorage.length).toBe(0);
+      expect(JSON.parse(window.localStorage.getItem("watchlist"))).toEqual([1]);
+    });
+
+    it("should restore a previously persisted watchlist on mount (issue #3, fixed)", async () => {
+      window.localStorage.setItem("watchlist", JSON.stringify([1]));
+
+      await renderStockList();
+
+      expect(within(cardFor("AAPL")).getByRole("button", { name: "Remove AAPL from watchlist" })).toBeInTheDocument();
     });
   });
 
@@ -459,8 +471,7 @@ describe("StockList", () => {
       logSpy.mockRestore();
     });
 
-    it("should fetch and log historical prices when 'Load Price History' is clicked (known issue #16 - the result is never rendered anywhere)", async () => {
-      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    it("should fetch and render historical prices when 'Load Price History' is clicked (issue #16, fixed)", async () => {
       const historicalPrices = [{ date: "2026-01-01", price: "987.65" }];
 
       fetchHistoricalPrices.mockResolvedValue(historicalPrices);
@@ -471,15 +482,14 @@ describe("StockList", () => {
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "View Details" }));
       await screen.findByText("Stock Details - AAPL");
-      logSpy.mockClear(); // drop the calls made by the background avg-price effect
       await user.click(screen.getByRole("button", { name: "Load Price History" }));
 
       await waitFor(() =>
         expect(fetchHistoricalPrices).toHaveBeenLastCalledWith("AAPL"),
       );
-      expect(logSpy).toHaveBeenCalledWith("Historical prices:", historicalPrices);
-
-      logSpy.mockRestore();
+      expect(
+        await screen.findByText("2026-01-01: $987.65"),
+      ).toBeInTheDocument();
     });
   });
 

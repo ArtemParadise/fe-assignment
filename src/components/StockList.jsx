@@ -14,8 +14,14 @@ function StockList({ stocks, searchTerm }) {
   const { stockNews, expandedStock, loadStockNews } = useStockNews();
   const stockMetrics = useStockMetrics(stocks);
 
-  const { stockDetails, loading, viewStockDetails, loadPriceHistory } =
-    useStockDetails();
+  const {
+    stockDetails,
+    loading,
+    priceHistory,
+    priceHistoryLoading,
+    viewStockDetails,
+    loadPriceHistory,
+  } = useStockDetails();
 
   const { visibleStocks, filterBySector, setFilterBySector, uniqueSectors } =
     useStockFilters(stocks, searchTerm);
@@ -58,6 +64,8 @@ function StockList({ stocks, searchTerm }) {
       <StockDetailsPanel
         loading={loading}
         details={stockDetails}
+        priceHistory={priceHistory}
+        priceHistoryLoading={priceHistoryLoading}
         onLoadPriceHistory={loadPriceHistory}
       />
     </div>

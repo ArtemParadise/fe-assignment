@@ -72,7 +72,14 @@ So the panel's reliability depended entirely on whether some _other_ state updat
 
 </details>
 
-## 3. High — Watchlist does not persist, despite being documented as doing so
+## 3. High — ~~Watchlist does not persist, despite being documented as doing so~~ (Fixed)
+
+**Where:** `src/hooks/useWatchlist.js`
+
+**Status: Fixed.** `watchlist` now initializes lazily from `localStorage` (key `"watchlist"`, JSON-encoded), falling back to `[]` if nothing is stored or the stored value isn't valid JSON, and a `useEffect` writes it back to `localStorage` on every change. Toggling a star now survives a reload. (`src/test/setup.js` now clears `localStorage` before every test, since the suite's jsdom environment persists it across tests in the same file otherwise.) Covered by `useWatchlist.test.js`'s persistence and restore-on-mount cases, and `StockList.test.jsx > watchlist > should persist the watchlist to localStorage (issue #3, fixed)` / `> should restore a previously persisted watchlist on mount (issue #3, fixed)`.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/hooks/useWatchlist.js` (moved here from `StockList.jsx` during the hooks decomposition, unchanged) — `watchlist` is a plain `useState([])`; there is no `localStorage` reference anywhere in the hook (confirmed with a full-file read) or the rest of `src/`.
 
@@ -82,6 +89,8 @@ The root [`README.md`](../README.md) lists "Watchlist functionality with localSt
 - `window.localStorage.length` is `0` immediately after toggling a star and checking in-browser.
 
 The feature (the star toggle itself, and its visual highlight) works as in-memory UI state; only the persistence half described in the docs is absent.
+
+</details>
 
 ## 4. Medium — ~~`fetchStockDetails` responses can arrive out of order (no request cancellation)~~ (Fixed)
 
@@ -290,7 +299,14 @@ The button's label is conditional on `isExpanded`, but its `onClick` always call
 
 </details>
 
-## 16. Medium — "Load Price History" fetches data that is never shown anywhere
+## 16. Medium — ~~"Load Price History" fetches data that is never shown anywhere~~ (Fixed)
+
+**Where:** `src/hooks/useStockDetails.js`, `src/components/StockDetailsPanel.jsx`
+
+**Status: Fixed.** `loadPriceHistory` now stores the fetched prices in a `priceHistory` state (plus a `priceHistoryLoading` flag) instead of only `console.log`-ing them, and `StockDetailsPanel` renders them as a scrollable `date: $price` list once loaded (styled via the new `.price-history` rule in `src/App.css`), with a "Loading price history..." message while in flight. Both reset whenever a new stock's details are requested, and — reusing the same `latestDetailsRequestId` ref that fixed issue #4 — a price-history response for a request that's since been superseded by a different stock is discarded instead of mislabeling that stock's panel. Covered by `useStockDetails.test.js`'s price-history cases, `StockDetailsPanel.test.jsx`'s rendering/loading cases, and `StockList.test.jsx > stock details > should fetch and render historical prices when 'Load Price History' is clicked (issue #16, fixed)`.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/hooks/useStockDetails.js` (`loadPriceHistory`, extracted from `StockList.jsx`)
 
@@ -305,6 +321,8 @@ const loadPriceHistory = () => {
 ```
 
 Still not fixed — this is unchanged behavior from the original report, just relocated during the hooks decomposition, and now explicitly flagged in-code (via the `eslint-disable` comment above) as a known issue rather than something to silently clean up. Clicking the button does fire a real request, but the result only reaches `console.log` behind a `// TODO` comment — there's no state update, so nothing on screen ever changes. From a user's perspective, the button is dead: nothing visibly happens when it's clicked.
+
+</details>
 
 ## 17. Medium — ~~`fetchStockDetails` errors are swallowed and leave the loading indicator stuck forever~~ (Fixed)
 

@@ -1,6 +1,12 @@
 import { formatVolumeLabel } from "../utils/formatters";
 
-function StockDetailsPanel({ loading, details, onLoadPriceHistory }) {
+function StockDetailsPanel({
+  loading,
+  details,
+  priceHistory,
+  priceHistoryLoading,
+  onLoadPriceHistory,
+}) {
   return (
     <>
       {loading && <div>Loading stock details...</div>}
@@ -25,6 +31,18 @@ function StockDetailsPanel({ loading, details, onLoadPriceHistory }) {
           </div>
 
           <button onClick={onLoadPriceHistory}>Load Price History</button>
+
+          {priceHistoryLoading && <div>Loading price history...</div>}
+
+          {priceHistory && (
+            <ul className="price-history" aria-label="Price history">
+              {priceHistory.map(({ date, price }) => (
+                <li key={date}>
+                  {date}: ${price}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </>
