@@ -8,9 +8,15 @@ export function useStockDetails() {
   const [priceHistory, setPriceHistory] = useState(null);
   const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
   const latestDetailsRequestId = useRef(0);
+  const latestHistoryRequestId = useRef(0);
+  const selectedSymbol = useRef(null);
 
   const viewStockDetails = (symbol) => {
     const requestId = ++latestDetailsRequestId.current;
+
+    selectedSymbol.current = symbol;
+    // Invalidate any in-flight price-history request from the previous selection.
+    latestHistoryRequestId.current += 1;
 
     setLoading(true);
     setPriceHistory(null);
@@ -33,18 +39,18 @@ export function useStockDetails() {
   };
 
   const loadPriceHistory = () => {
-    const requestId = latestDetailsRequestId.current;
-    const symbol = stockDetails.symbol;
+    const symbol = selectedSymbol.current;
+    const requestId = ++latestHistoryRequestId.current;
 
     setPriceHistoryLoading(true);
     fetchHistoricalPrices(symbol)
       .then((prices) => {
-        if (latestDetailsRequestId.current === requestId) {
+        if (latestHistoryRequestId.current === requestId && selectedSymbol.current === symbol) {
           setPriceHistory(prices);
         }
       })
       .finally(() => {
-        if (latestDetailsRequestId.current === requestId) {
+        if (latestHistoryRequestId.current === requestId && selectedSymbol.current === symbol) {
           setPriceHistoryLoading(false);
         }
       });
