@@ -1,4 +1,4 @@
-import { formatVolumeInMillions } from "../utils/formatters";
+import { formatVolumeLabel } from "../utils/formatters";
 
 const getWatchlistLabel = (symbol, isWatchlisted) => isWatchlisted
   ? `Remove ${symbol} from watchlist`
@@ -55,7 +55,7 @@ function StockCard({
       <p className="stock-sector">{stock.sector}</p>
 
       <div className="user-stats">
-        <small>Volume: {formatVolumeInMillions(stock.volume)}M</small>
+        <small>Volume: {formatVolumeLabel(stock.volume)}</small>
         <small>Avg: {avgPrice?.toFixed(2) || "Loading..."}</small>
       </div>
 
