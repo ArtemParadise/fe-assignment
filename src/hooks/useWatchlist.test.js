@@ -78,4 +78,20 @@ describe("useWatchlist", () => {
 
     expect(result.current.watchlist).toEqual([]);
   });
+
+  it("should fall back to an empty watchlist if localStorage holds a JSON null", () => {
+    localStorage.setItem("watchlist", JSON.stringify(null));
+
+    const { result } = renderHook(() => useWatchlist());
+
+    expect(result.current.watchlist).toEqual([]);
+  });
+
+  it("should fall back to an empty watchlist if localStorage holds a JSON object", () => {
+    localStorage.setItem("watchlist", JSON.stringify({ 1: true }));
+
+    const { result } = renderHook(() => useWatchlist());
+
+    expect(result.current.watchlist).toEqual([]);
+  });
 });
