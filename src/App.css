@@ -97,6 +97,7 @@ button:hover {
 .filter-controls {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -176,7 +177,7 @@ button:hover {
 .stock-name {
   color: #555;
   font-size: 13px;
-  margin: 88px 0;
+  margin: 8px 0;
   border-top: 1px solid #eee;
   display: flex;
   justify-content: space-between;
@@ -205,6 +206,10 @@ button:hover {
   margin: 10px 0;
   padding: 5px 0;
   border-top: 1px solid #eee;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px;
 }
 
 .user-stats small {
@@ -252,8 +257,7 @@ button:hover {
 
 .user-details p {
   margin: 10px 0;
-  display: block;
-  color: #999;
+  color: #495057;
   font-size: 11px;
   margin-bottom: 5px;
 }
@@ -306,10 +310,6 @@ button:hover {
 
 .user-details h3 {
   margin-bottom: 15px;
-}
-
-.user-details p {
-  margin: 8px 0;
 }
 
 .counter {
