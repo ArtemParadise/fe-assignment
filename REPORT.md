@@ -167,7 +167,7 @@ At real scale — a live API instead of a mock, hundreds of rows instead of ten 
 
 ## Where things stand
 
-- 150 tests, 18 files, all passing. 99.8% statement coverage.
+- 152 tests, 18 files, all passing. 99.8% statement coverage.
 - `npm run lint` clean.
 - Lint, tests, and build run in CI on every PR; lint-staged on pre-commit, full suite on pre-push.
 - 30 of 32 known issues fixed; the one left open ([#5](./docs/known-issues.md#issue-5-details-panel-values-are-unrelated-to-the-summary-card-for-the-same-symbol)) is a property of the mock data generator, not the app.

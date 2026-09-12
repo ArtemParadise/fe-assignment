@@ -28,8 +28,6 @@ export function useStockDetails() {
         }
       })
       .catch((err) => {
-        // Logged only, never surfaced: showing it needs an error state in the
-        // panel, which the "don't redesign" boundary rules out (issue #17).
         console.error(err);
       })
       .finally(() => {

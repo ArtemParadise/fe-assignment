@@ -440,6 +440,8 @@ No loading flag exists anywhere. The first two attempts at this fix both added o
 
 **Tests:** `StockNews.test.jsx > should say there is no news when the response settled empty (issue #27, fixed)` and `> should show a loading message while no news entry has arrived yet` pin the two states apart; `useStockNews.test.js > should leave the entry absent while the request is in flight and set it once resolved` pins the same distinction in the hook. `StockCard.test.jsx` keeps only the card's own concern — whether the panel is rendered at all.
 
+The wiring needed its own guard: with the component and hook tested in isolation, restoring the `|| []` on the prop left the whole suite green. `StockList.test.jsx > passes an unloaded news entry through as undefined, so the card can tell loading from empty (issue #27, fixed)` and `> passes an empty news entry through as empty, not as still loading (issue #27, fixed)` close that — verified to fail if the fallback comes back.
+
 ---
 
 ### Issue #28: `SearchBar` suggestions keyed by array index
