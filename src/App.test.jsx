@@ -20,10 +20,9 @@ vi.mock("./components/SearchBar", () => ({
 }));
 
 vi.mock("./components/StockList", () => ({
-  default: ({ stocks, filteredStocks, searchTerm }) => (
+  default: ({ stocks, searchTerm }) => (
     <div>
       <span>stocks:{stocks.length}</span>
-      <span>filtered:{filteredStocks.length}</span>
       <span>term:{searchTerm}</span>
     </div>
   ),
@@ -78,12 +77,6 @@ describe("App", () => {
     expect(await screen.findByText("stocks:2")).toBeInTheDocument();
   });
 
-  it("should pass every stock through as filteredStocks when the search term is empty", async () => {
-    render(<App />);
-
-    expect(await screen.findByText("filtered:2")).toBeInTheDocument();
-  });
-
   it("should pass the search term typed into SearchBar down to StockList", async () => {
     render(<App />);
     await screen.findByText("stocks:2");
@@ -93,29 +86,5 @@ describe("App", () => {
     });
 
     expect(await screen.findByText("term:AAPL")).toBeInTheDocument();
-  });
-
-  it("should recompute filteredStocks by a case-sensitive name match (dead prop: StockList ignores it, see known issue #9)", async () => {
-    render(<App />);
-    await screen.findByText("stocks:2");
-
-    // Unlike StockList's own filter, this one does NOT lowercase `name`
-    // before comparing, so "tesla" does not match "Tesla Inc.".
-    fireEvent.change(screen.getByPlaceholderText("Search stocks..."), {
-      target: { value: "tesla" },
-    });
-
-    expect(await screen.findByText("filtered:0")).toBeInTheDocument();
-  });
-
-  it("should match filteredStocks by symbol via an uppercased comparison, independent of the name check's casing", async () => {
-    render(<App />);
-    await screen.findByText("stocks:2");
-
-    fireEvent.change(screen.getByPlaceholderText("Search stocks..."), {
-      target: { value: "aapl" },
-    });
-
-    expect(await screen.findByText("filtered:1")).toBeInTheDocument();
   });
 });

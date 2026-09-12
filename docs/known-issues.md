@@ -186,14 +186,11 @@ Warning: Each child in a list should have a unique "key" prop.
 
 </details>
 
-## 9. Low — Dead state and props in `App.jsx` (partially fixed)
+## 9. Low — ~~Dead state and props in `App.jsx`~~ (Fixed)
 
 **Where:** `src/App.jsx`
 
-**Status: Partially fixed.** The dead `showTimer` state and the dead `selectedStock` / `setActiveSelectedStockFromMarketDataRequested` write have both been removed entirely — `App.jsx` no longer declares either. The other two items are still present, unchanged:
-
-- `filteredStocks` (`App.jsx:22-26`) is computed and passed to `<StockList filteredStocks={filteredStocks}>` (`App.jsx:36`), but `StockList`'s signature (`src/components/StockList.jsx:11`) only destructures `{ stocks, searchTerm }` — the prop is ignored, and `StockList` recomputes an equivalent list internally from `searchTerm` via `useStockFilters` (`src/hooks/useStockFilters.js`). Two implementations of the same filter still exist; only one is live.
-- `config = { theme: "dark", lang: "en" }` (`App.jsx:16`) is applied as `style={config}` on the root `<div>` (`App.jsx:29`). `theme` and `lang` aren't real CSS properties, so this still has no visual effect — reads like an abandoned theming attempt.
+**Status: Fixed.** The dead `showTimer` state and the dead `selectedStock` / `setActiveSelectedStockFromMarketDataRequested` write were already removed in an earlier pass. The remaining two items are now gone too: `filteredStocks` (the redundant, case-sensitive computation duplicating `useStockFilters`) and the ignored `filteredStocks` prop passed to `StockList` have both been deleted, and `config = { theme: "dark", lang: "en" }` plus its `style={config}` on the root `<div>` have been removed. `App` now just passes `stocks` and `searchTerm` down to `StockList`, which is all it ever used. Pure deletion, no behavior change — covered by the existing `App.test.jsx` suite (the tests that specifically pinned down the dead `filteredStocks` prop's own quirky behavior were removed along with it, since that computation no longer exists).
 
 ## 10. Low — ~~`SearchBar` duplicates `App`'s data fetch~~ (Fixed)
 
@@ -387,9 +384,14 @@ Selecting a suggestion updates the input and reports the value via `onSearch`, b
 
 `setSuggestions` is only ever called inside the `newValue.length > 2` branch. Clearing the input back to an empty string skips that branch entirely, so whatever suggestions were showing before the clear stay rendered, now disconnected from the (empty) query in the box.
 
-</details>
+## 20. Low — ~~Dead `sortBy === "name"` branch in the sort comparators~~ (Fixed)
 
-## 20. Low — Dead `sortBy === "name"` branch in the sort comparators
+**Where:** `src/constants/sorting.js`
+
+**Status: Fixed.** `SORT_FIELDS.NAME` and its `SORT_COMPARATORS` entry have been deleted. `sortBy` is only ever set by `useStockSort`'s `handleSort`, itself only ever called from the six sort buttons `StockControls.jsx` renders (Symbol, Price, Change, Volume, Sector, Avg Price) — none of which passed `SORT_FIELDS.NAME` — so this branch was unreachable through the UI. Pure deletion, no behavior change: no test in the suite referenced `SORT_FIELDS.NAME` or the `"name"` sort value, and the full suite (including `useStockSort.test.js` and `StockControls.test.jsx`) passes unchanged.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/constants/sorting.js` (`SORT_COMPARATORS[SORT_FIELDS.NAME]`, moved here from the inline `sortStocks` in `StockList.jsx` during the hooks decomposition)
 
@@ -408,6 +410,8 @@ export const SORT_COMPARATORS = {
 ```
 
 Still dead: `SORT_FIELDS.NAME` and its comparator exist, but `sortBy` is only ever set by `useStockSort`'s `handleSort`, which is only ever called from the six sort buttons `StockControls.jsx` renders (Symbol, Price, Change, Volume, Sector, Avg Price) — none of them pass `SORT_FIELDS.NAME`. This branch can't be reached through the UI at all; it's the same flavor of dead code as the `filteredStocks`/`config` leftovers now noted in issue #9, just in the sorting module instead of `App`.
+
+</details>
 
 ## 21. Low — ~~`formatVolumeInMillions` renders `NaNM`, or silently shows `null` volume as `0.0M`~~ (Fixed)
 
