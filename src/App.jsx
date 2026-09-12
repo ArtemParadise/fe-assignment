@@ -13,29 +13,17 @@ function App() {
     generateStockData().then(setStocks);
   }, []);
 
-  const config = { theme: "dark", lang: "en" };
-
   const handleSearch = (term) => {
     setSearchTerm(term);
   };
 
-  const filteredStocks = stocks.filter(({ name, symbol }) => {
-    return (
-      name.includes(searchTerm) || symbol.includes(searchTerm.toUpperCase())
-    );
-  });
-
   return (
-    <div className="App" style={config}>
+    <div className="App">
       <h1>Stock Trading Dashboard</h1>
 
       <SearchBar onSearch={handleSearch} placeholder="Search stocks..." stocks={stocks} />
 
-      <StockList
-        stocks={stocks}
-        filteredStocks={filteredStocks}
-        searchTerm={searchTerm}
-      />
+      <StockList stocks={stocks} searchTerm={searchTerm} />
     </div>
   );
 }
