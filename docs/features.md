@@ -61,13 +61,21 @@ This is a property of the mock API — `fetchStockDetails` generates fresh rando
 
 Clicking "Show News" expands an inline panel with 3 mock articles (title, date, first 80 characters of the summary) under that card. The button becomes "Hide News" and collapses the panel again, without re-fetching. Content is templated per symbol (e.g. "`{SYMBOL}` Reports Strong Q4 Earnings") — the same 3 headlines and dates for every stock with the symbol substituted in.
 
-*Changed:* the panel could get stuck permanently on "Loading news..." even after the data arrived ([#2](./known-issues.md#issue-2-news-panel-can-get-permanently-stuck-on-loading-news)), and "Hide News" was a no-op that never collapsed anything ([#15](./known-issues.md#issue-15-hide-news-never-collapses-the-news-panel)).
+If a stock has no articles, or the request fails, the panel says "No news available." rather than showing a loading message.
+
+*Changed:* the panel could get stuck permanently on "Loading news..." even after the data arrived ([#2](./known-issues.md#issue-2-news-panel-can-get-permanently-stuck-on-loading-news)), "Hide News" was a no-op that never collapsed anything ([#15](./known-issues.md#issue-15-hide-news-never-collapses-the-news-panel)), and an empty or failed response was indistinguishable from one still loading ([#27](./known-issues.md#issue-27-stockcard-treats-an-empty-news-list-as-still-loading)).
 
 ## 8. Load Price History
 
 A button inside the details panel, "Load Price History", fetches 31 days of mock price history and renders it as a scrollable `date: $price` list, with a "Loading price history..." message while in flight. The list resets when you open a different stock's details.
 
 *Changed:* the button fetched the data and only `console.log`-ged it — nothing appeared in the UI, so the control was dead from a user's point of view ([#16](./known-issues.md#issue-16-load-price-history-fetches-data-that-is-never-shown-anywhere)).
+
+## Error handling
+
+If a render error escapes anywhere in the tree, the page shows a "Something went wrong." panel with a reload button instead of going blank ([#24](./known-issues.md#issue-24-no-error-boundary-anywhere-in-the-tree)).
+
+Failed background requests no longer strand the UI on a loading message: a stock whose metrics fail shows "Avg: N/A", news falls back to "No news available.", and the price-history indicator clears ([#26](./known-issues.md#issue-26-unhandled-promise-rejections-in-three-fetches)).
 
 ## Responsiveness
 

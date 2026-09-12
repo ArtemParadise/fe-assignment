@@ -115,7 +115,7 @@ describe("useStockDetails", () => {
   });
 
   it("should log the error and clear loading if fetchStockDetails rejects (issue #17, fixed)", async () => {
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const error = new Error("network down");
 
     fetchStockDetails.mockRejectedValue(error);
@@ -124,10 +124,10 @@ describe("useStockDetails", () => {
 
     act(() => result.current.viewStockDetails("AAPL"));
 
-    await waitFor(() => expect(logSpy).toHaveBeenCalledWith(error));
+    await waitFor(() => expect(errorSpy).toHaveBeenCalledWith(error));
     expect(result.current.loading).toBe(false);
 
-    logSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 
   it("should start with no price history and not loading it", () => {
@@ -155,6 +155,27 @@ describe("useStockDetails", () => {
 
     expect(fetchHistoricalPrices).toHaveBeenCalledWith("AAPL");
     expect(result.current.priceHistory).toEqual(historicalPrices);
+  });
+
+  it("should log and clear the loading flag if the price-history request rejects (issue #26, fixed)", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    fetchStockDetails.mockResolvedValue(aaplDetails);
+    fetchHistoricalPrices.mockRejectedValue(new Error("network down"));
+
+    const { result } = renderHook(() => useStockDetails());
+
+    act(() => result.current.viewStockDetails("AAPL"));
+    await waitFor(() => expect(result.current.stockDetails).toEqual(aaplDetails));
+
+    act(() => result.current.loadPriceHistory());
+
+    await waitFor(() => expect(result.current.priceHistoryLoading).toBe(false));
+
+    expect(result.current.priceHistory).toBeNull();
+    expect(consoleError).toHaveBeenCalled();
+
+    consoleError.mockRestore();
   });
 
   it("should discard a stale price-history response for a stock that's no longer selected", async () => {

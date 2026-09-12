@@ -1,13 +1,22 @@
 import { formatVolumeLabel } from "../utils/formatters";
 
+import StockNews from "./StockNews";
+
 const getWatchlistLabel = (symbol, isWatchlisted) => isWatchlisted
   ? `Remove ${symbol} from watchlist`
   : `Add ${symbol} to watchlist`;
+
+const getAvgPriceLabel = (avgPrice, avgPriceFailed) => {
+  if (avgPrice !== undefined) return avgPrice.toFixed(2);
+
+  return avgPriceFailed ? "N/A" : "Loading...";
+};
 
 function StockCard({
   stock,
   isWatchlisted,
   avgPrice,
+  avgPriceFailed,
   news,
   isExpanded,
   onToggleWatchlist,
@@ -37,7 +46,7 @@ function StockCard({
       <p className="stock-name">{stock.name}</p>
 
       <div className="stock-price">
-        <span style={{ fontSize: "24px", fontWeight: "bold" }}>
+        <span className="stock-price-value">
           ${stock.price.toFixed(2)}
         </span>
         <span
@@ -56,7 +65,7 @@ function StockCard({
 
       <div className="user-stats">
         <small>Volume: {formatVolumeLabel(stock.volume)}</small>
-        <small>Avg: {avgPrice?.toFixed(2) || "Loading..."}</small>
+        <small>Avg: {getAvgPriceLabel(avgPrice, avgPriceFailed)}</small>
       </div>
 
       <div className="user-actions">
@@ -68,19 +77,7 @@ function StockCard({
 
       {isExpanded && (
         <div className="user-posts">
-          {news.length === 0 ? (
-            <p>Loading news...</p>
-          ) : (
-            <ul>
-              {news.slice(0, 3).map((article) => (
-                <li key={article.id}>
-                  <strong>{article.title}</strong>
-                  <small>{article.date}</small>
-                  <p>{article.summary.substring(0, 80)}...</p>
-                </li>
-              ))}
-            </ul>
-          )}
+          <StockNews news={news} />
         </div>
       )}
     </div>

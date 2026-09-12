@@ -68,25 +68,31 @@ describe("StockCard", () => {
     expect(screen.getByText("-3.40%")).toHaveStyle({ color: "rgb(255, 0, 0)" });
   });
 
-  it("should show only the first 3 articles, each truncated to 80 characters with an ellipsis", async () => {
-    const news = [
-      { id: 1, title: "One", date: "2026-01-01", summary: "a".repeat(100) },
-      { id: 2, title: "Two", date: "2026-01-02", summary: "b".repeat(100) },
-      { id: 3, title: "Three", date: "2026-01-03", summary: "c".repeat(100) },
-      { id: 4, title: "Four", date: "2026-01-04", summary: "d".repeat(100) },
-    ];
+  it("should not render the news panel while the card is collapsed", () => {
+    const news = [{ id: 1, title: "One", date: "2026-01-01", summary: "a" }];
+
+    renderCard({ isExpanded: false, news });
+
+    expect(screen.queryByText("One")).not.toBeInTheDocument();
+    expect(screen.queryByText("Loading news...")).not.toBeInTheDocument();
+  });
+
+  it("should render the news panel with the articles it was given once expanded", () => {
+    const news = [{ id: 1, title: "One", date: "2026-01-01", summary: "a" }];
 
     renderCard({ isExpanded: true, news });
 
     expect(screen.getByText("One")).toBeInTheDocument();
-    expect(screen.getByText("Two")).toBeInTheDocument();
-    expect(screen.getByText("Three")).toBeInTheDocument();
-    expect(screen.queryByText("Four")).not.toBeInTheDocument();
-    expect(screen.getByText(`${"a".repeat(80)}...`)).toBeInTheDocument();
+  });
+
+  it("should hand an absent news entry to the panel as the loading state", () => {
+    renderCard({ isExpanded: true, news: undefined });
+
+    expect(screen.getByText("Loading news...")).toBeInTheDocument();
   });
 
   it("should show 'Loading...' for avg price until it is provided", () => {
-    renderCard({ avgPrice: undefined });
+    renderCard({ avgPrice: undefined, avgPriceFailed: false });
 
     expect(screen.getByText("Avg: Loading...")).toBeInTheDocument();
   });
@@ -95,6 +101,12 @@ describe("StockCard", () => {
     renderCard({ avgPrice: 150 });
 
     expect(screen.getByText("Avg: 150.00")).toBeInTheDocument();
+  });
+
+  it("should show 'N/A' for avg price if the metrics request failed (issue #26, fixed)", () => {
+    renderCard({ avgPrice: undefined, avgPriceFailed: true });
+
+    expect(screen.getByText("Avg: N/A")).toBeInTheDocument();
   });
 
   it("should render an empty star and an 'Add ... to watchlist' label by default", () => {

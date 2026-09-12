@@ -51,7 +51,7 @@ First thing that jumps out going through the code: unused imports, unused variab
 
 Second: `StockList` is heavily overloaded. Sorting, filtering, four different fetches, watchlist state, news state — all in one file. It needs decomposition into helpers, hooks, components, constants.
 
-Underneath that were real bugs. The full list is in [docs/known-issues.md](./docs/known-issues.md) — 23 issues, 22 fixed. The ones that actually mattered:
+Underneath that were real bugs. The full list is in [docs/known-issues.md](./docs/known-issues.md) — 32 issues, 30 fixed. The ones that actually mattered:
 
 | | |
 |---|---|
@@ -91,6 +91,20 @@ Then I went in deliberately, on my own judgment:
 
 Added a GitHub Actions workflow ([PR #7](https://github.com/ArtemParadise/fe-assignment/pull/7)): lint, tests, and build on every PR. Husky runs lint-staged on pre-commit and the full suite on pre-push, so the same gates apply locally.
 
+### A second pass over my own work
+
+When the refactoring settled, I audited the result instead of calling it done. Nine more issues, [#24–#32](./docs/known-issues.md) — eight fixed, one left alone on purpose. They fell into two patterns.
+
+**Error handling was the real gap.** Three fetches chained `.then()` with no `.catch()`, so a failure meant an unhandled rejection plus a loading message that never cleared — the exact shape I'd fixed for `fetchStockDetails` under #17 and hadn't gone looking for elsewhere. All three catch and log now. There was also no error boundary anywhere, which is why #1 was Critical rather than merely broken: React unmounts the whole tree on an uncaught render error. The app is wrapped in one now, so a render error costs a message and a reload button instead of a blank page.
+
+**Some of my own fixes had been applied in one place and missed in another.** `SearchBar` was still keying suggestions by index, which #11 fixed in `StockList`; `StockCard` was still reading an empty news list as "still loading", the other half of #2. Both fixed — and the news panel moved into its own `StockNews` component on the way, which dropped a prop and a piece of state rather than adding any. Fixing a bug isn't done until I've grepped for the same shape elsewhere.
+
+**Two optimisations I wrote and then took back out.** `useWatchlist` builds its next list from the render closure, so two toggles in one tick would drop the first; `useClickOutside` re-subscribes its listener on every render. Both have a textbook fix — a functional updater, a handler held in a ref — and I implemented both before reverting. The updater forces persistence into an effect that writes to `localStorage` on every mount; the ref costs a second effect on every render to save two cheap DOM calls.
+
+Same criterion both times: the fix charges every render or page load, and the bug it guards against isn't reachable through the UI. Both are written up rather than quietly dropped — [#31](./docs/known-issues.md#issue-31-usewatchlist-computes-the-next-list-from-a-stale-closure-not-changed), which stays open, and the dropped half of [#29](./docs/known-issues.md#issue-29-useclickoutside-dereferences-a-possibly-null-ref). Only the re-subscription was reverted there: `#29`'s actual defect is an unguarded `ref.current` that throws if the event fires while the ref holds no element, and that guard shipped.
+
+I also turned on `StrictMode`, which would have surfaced some of this earlier.
+
 ## Tooling and process
 
 **CodeRabbit worked out well.** Some of the bugs on my list got fixed on the fly through its review. I didn't need custom instructions — code style in my case is set by ESLint, and the repo's standards were still being formed as I went. On a large codebase custom instructions would be genuinely useful, to put the emphasis in the right places.
@@ -129,7 +143,7 @@ Which makes the UI-visible changes the ones that need an argument. Every one of 
 
 ## Ideas I rejected
 
-**Splitting components and hooks into nested folders.** Right now it's 5 components and 7 hooks in a flat structure (`components/`, `hooks/`), and that reads at a glance. Nesting pays off when there are dozens of files and the flat list turns into a wall — here it's the opposite: it would add levels of navigation and imports for the sake of a structure there isn't yet volume for.
+**Splitting components and hooks into nested folders.** Right now it's 7 components and 7 hooks in a flat structure (`components/`, `hooks/`), and that reads at a glance. Nesting pays off when there are dozens of files and the flat list turns into a wall — here it's the opposite: it would add levels of navigation and imports for the sake of a structure there isn't yet volume for.
 
 **Moving to TypeScript.** The value shows up at scale: a growing codebase, several developers, complex contracts between modules — that's when types pay for themselves. Within this assignment there isn't a single bug caused by the absence of types (every issue found is logic, effects, or CSS — not a type mismatch), so it'd be overhead without a return.
 
@@ -137,25 +151,24 @@ This is the call I'd most expect pushback on, and I think it's the right one for
 
 **Splitting CSS into per-component SCSS modules.** `App.css` is 345 lines for 6 components, ~20 `className` references in total, and I didn't see any actual class collisions — every CSS bug found was a specific broken rule (a stray `margin`, a missing `flex-wrap`, two conflicting selectors), not a consequence of global scope. Splitting into modules means rewriting `className` across all components and adding SCSS to the toolchain for a hypothetical problem, while carrying a risk of visual regression exactly where the brief explicitly requires not changing the design.
 
+**Pulling the remaining magic numbers into named constants.** Left for later. What's left — the suggestions threshold in `SearchBar`, the divisors in `formatters` and `StockDetailsPanel` — is used once each, in the file that owns it, next to the code that explains it. Nothing to deduplicate, nothing that can drift out of sync, so a name costs a jump to the top of the file and buys little. It starts paying off once a value is shared across files; then I'd extract it, and `constants/sorting.js` already sets the pattern for where.
+
 **Upgrading library versions.** Vite/Vitest and React aren't on the latest majors, but upgrading isn't part of the goal of this refactor (architecture, readability, correctness of the existing code) and adds its own separate risk: possible breaking changes in config or build that I'd be debugging instead of making more meaningful improvements.
 
 ## What I'd do next
 
-Things I know are still open. None of them are large; they're where I'd start on the next pass.
+What's still open, after both passes:
 
-- **No error boundary.** Issue #1 is fixed, but the structural reason it took the whole app down — nothing catches a render error anywhere in the tree — is still there.
-- **No `React.StrictMode`.** Worth turning on to surface effect problems early.
-- **Three unhandled rejections.** `useStockMetrics`, `useStockNews`, and `loadPriceHistory` in `useStockDetails` all chain `.then()` with no `.catch()`. Each one leaves a permanent "Loading…" if the request ever fails — the same failure shape as #17, which I did fix for `fetchStockDetails`.
-- **`StockCard` conflates loading with empty.** `news.length === 0` renders "Loading news...", so a genuinely empty response would hang on that message forever.
-- **`SearchBar` still keys suggestions by index**, which is the same thing I fixed in `StockList` under #11.
-- **Surfacing fetch errors in the UI.** Right now `useStockDetails` only logs them. Doing this properly needs an error state in the panel, which is a UI addition the brief rules out — so it's listed here rather than done.
-- **Dead CSS.** `.timer`, `.timer-display`, and `.counter` survived the removal of the timer feature.
+- **Surfacing fetch errors in the UI.** Failures are now caught and logged rather than left unhandled, but the user still isn't told. Doing it properly means an error state in the details panel and on the card — a UI addition the brief rules out, so it's listed here rather than done. It's the first thing I'd build if the boundary were lifted.
+- **The details panel's numbers don't match the card** ([#5](./docs/known-issues.md#issue-5-details-panel-values-are-unrelated-to-the-summary-card-for-the-same-symbol)). `fetchStockDetails` generates fresh random values instead of looking anything up. Fixing it means rewriting the fake data source rather than the app, so I documented it and left it.
+- **Search doesn't match on sector**, which surprises people who type "tech". That's existing behaviour, and changing it would be a feature decision, not a refactor.
 
 At real scale — a live API instead of a mock, hundreds of rows instead of ten — the next steps would be different in kind: a data layer with request deduplication and caching (the same `fetchHistoricalPrices(symbol)` is currently called twice for the same symbol from two different places), memoisation driven by actual profiling, and list virtualisation. I deliberately didn't do any of that here. With 10 stocks and an in-memory mock, adding it would be cargo cult — there is currently no `useMemo`, `useCallback`, or `memo` anywhere in the codebase, and at this size that's the correct answer, not an oversight.
 
 ## Where things stand
 
-- 132 tests, 16 files, all passing. 99.6% statement coverage.
+- 154 tests, 18 files, all passing. 99.8% statement coverage.
 - `npm run lint` clean.
 - Lint, tests, and build run in CI on every PR; lint-staged on pre-commit, full suite on pre-push.
-- 22 of 23 known issues fixed; the one left open ([#5](./docs/known-issues.md#issue-5-details-panel-values-are-unrelated-to-the-summary-card-for-the-same-symbol)) is a property of the mock data generator, not the app.
+- 30 of 32 known issues fixed; the one left open ([#5](./docs/known-issues.md#issue-5-details-panel-values-are-unrelated-to-the-summary-card-for-the-same-symbol)) is a property of the mock data generator, not the app.
+- Driven in a real browser after the final pass — load, sort by Avg Price, expand and collapse news, watchlist toggle — with zero console errors or warnings under StrictMode.

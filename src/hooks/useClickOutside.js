@@ -7,7 +7,8 @@ export function useClickOutside(ref, onOutsideClick, enabled = true) {
     }
 
     const handleMouseDown = (e) => {
-      if (!ref.current.contains(e.target)) {
+      // ref.current is null before the element attaches and after it unmounts.
+      if (ref.current && !ref.current.contains(e.target)) {
         onOutsideClick(e);
       }
     };

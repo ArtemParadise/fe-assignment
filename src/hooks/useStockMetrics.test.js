@@ -57,4 +57,28 @@ describe("useStockMetrics", () => {
       expect(result.current[5]?.avgPrice).toBe(10);
     });
   });
+
+  it("should record a terminal error state and log if a stock's request rejects (issue #26, fixed)", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    fetchHistoricalPrices.mockImplementation((symbol) =>
+      symbol === "AAPL"
+        ? Promise.reject(new Error("network down"))
+        : Promise.resolve([{ price: "10.00" }]),
+    );
+
+    const { result } = renderHook(() =>
+      useStockMetrics([
+        { id: 1, symbol: "AAPL" },
+        { id: 5, symbol: "TSLA" },
+      ]),
+    );
+
+    await waitFor(() => expect(result.current[5]?.avgPrice).toBe(10));
+
+    expect(result.current[1]).toEqual({ error: true });
+    expect(consoleError).toHaveBeenCalled();
+
+    consoleError.mockRestore();
+  });
 });

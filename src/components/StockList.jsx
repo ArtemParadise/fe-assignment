@@ -11,8 +11,8 @@ import StockDetailsPanel from "./StockDetailsPanel";
 
 function StockList({ stocks, searchTerm }) {
   const { watchlist, toggleWatchlist } = useWatchlist();
-  const { stockNews, expandedStock, loadStockNews } = useStockNews();
   const stockMetrics = useStockMetrics(stocks);
+  const { stockNews, expandedStock, loadStockNews } = useStockNews();
 
   const {
     stockDetails,
@@ -51,7 +51,8 @@ function StockList({ stocks, searchTerm }) {
               stock={stock}
               isWatchlisted={watchlist.includes(stock.id)}
               avgPrice={stockMetrics[stock.id]?.avgPrice}
-              news={stockNews[stock.symbol] || []}
+              avgPriceFailed={Boolean(stockMetrics[stock.id]?.error)}
+              news={stockNews[stock.symbol]}
               isExpanded={expandedStock === stock.symbol}
               onToggleWatchlist={() => toggleWatchlist(stock.id)}
               onViewDetails={() => viewStockDetails(stock.symbol)}

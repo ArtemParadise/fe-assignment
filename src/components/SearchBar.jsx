@@ -21,14 +21,6 @@ function SearchBar({ onSearch, placeholder, stocks }) {
     setShouldShowSuggestions(newValue.length > 2);
   };
 
-  const inputStyle = {
-    padding: "10px",
-    fontSize: "16px",
-    border: "1px solid #ccc",
-    borderRadius: "4px",
-    width: "100%",
-  };
-
   return (
     <div className="search-bar" ref={containerRef}>
       <input
@@ -36,13 +28,12 @@ function SearchBar({ onSearch, placeholder, stocks }) {
         value={value}
         onChange={handleChange}
         placeholder={placeholder}
-        style={inputStyle}
       />
 
       {suggestions.length > 0 && (
         <ul className="suggestions">
-          {suggestions.map((item, idx) => (
-            <li key={idx}>
+          {suggestions.map((item) => (
+            <li key={item.id}>
               <button
                 type="button"
                 onClick={() => {

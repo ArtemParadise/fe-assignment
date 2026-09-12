@@ -28,21 +28,17 @@ button:hover {
   background: #0056b3;
 }
 
-.timer {
-  margin: 20px 0;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.timer-display {
-  margin: 20px 0;
-  text-align: center;
-}
-
 .search-bar {
   margin: 20px 0;
   position: relative;
+}
+
+.search-bar input {
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
 }
 
 .suggestions {
@@ -190,6 +186,11 @@ button:hover {
   margin: 12px 0;
 }
 
+.stock-price-value {
+  font-size: 24px;
+  font-weight: bold;
+}
+
 .stock-sector {
   display: inline-block;
   background: #e3f2fd;
@@ -328,18 +329,19 @@ button:hover {
   margin-bottom: 15px;
 }
 
-.counter {
+.error-boundary {
   margin: 20px 0;
   padding: 20px;
-  background: #fff3cd;
+  background: #f8d7da;
+  border: 1px solid #f5c2c7;
   border-radius: 8px;
+  color: #842029;
 }
 
-.counter h2 {
+.error-boundary h2 {
   margin-bottom: 10px;
 }
 
-.counter p {
-  margin: 10px 0;
-  font-size: 18px;
+.error-boundary button {
+  margin-left: 0;
 }

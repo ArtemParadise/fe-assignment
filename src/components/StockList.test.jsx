@@ -194,6 +194,15 @@ describe("StockList", () => {
     expect(within(cardFor("TSLA")).getByText("Avg: Loading...")).toBeInTheDocument();
   });
 
+  it("passes a failed metrics entry through so the card shows 'N/A' instead of loading forever (issue #26, fixed)", () => {
+    setupHooks({ metrics: { 5: { error: true } } });
+
+    render(<StockList stocks={stocks} searchTerm="" />);
+
+    expect(within(cardFor("TSLA")).getByText("Avg: N/A")).toBeInTheDocument();
+    expect(within(cardFor("AAPL")).getByText("Avg: Loading...")).toBeInTheDocument();
+  });
+
   it("passes each stock's news state to its card and requests news for the clicked stock", async () => {
     const loadStockNews = vi.fn();
 
@@ -214,6 +223,28 @@ describe("StockList", () => {
     await user.click(within(cardFor("TSLA")).getByRole("button", { name: "Show News" }));
 
     expect(loadStockNews).toHaveBeenCalledWith("TSLA");
+  });
+
+  it("passes an unloaded news entry through as undefined, so the card can tell loading from empty (issue #27, fixed)", () => {
+    setupHooks({ news: { expandedStock: "AAPL", stockNews: {} } });
+
+    render(<StockList stocks={stocks} searchTerm="" />);
+
+    expect(within(cardFor("AAPL")).getByText("Loading news...")).toBeInTheDocument();
+    expect(
+      within(cardFor("AAPL")).queryByText("No news available."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("passes an empty news entry through as empty, not as still loading (issue #27, fixed)", () => {
+    setupHooks({ news: { expandedStock: "AAPL", stockNews: { AAPL: [] } } });
+
+    render(<StockList stocks={stocks} searchTerm="" />);
+
+    expect(within(cardFor("AAPL")).getByText("No news available.")).toBeInTheDocument();
+    expect(
+      within(cardFor("AAPL")).queryByText("Loading news..."),
+    ).not.toBeInTheDocument();
   });
 
   it("requests details for the clicked stock and renders the resolved panel from useStockDetails", async () => {

@@ -28,8 +28,7 @@ export function useStockDetails() {
         }
       })
       .catch((err) => {
-        // eslint-disable-next-line no-console -- known issue #17 (docs/known-issues.md, fixed): error is only logged to the console, never surfaced to the user; not fixing app bugs in this eslint cleanup
-        console.log(err);
+        console.error(err);
       })
       .finally(() => {
         if (latestDetailsRequestId.current === requestId) {
@@ -48,6 +47,9 @@ export function useStockDetails() {
         if (latestHistoryRequestId.current === requestId && selectedSymbol.current === symbol) {
           setPriceHistory(prices);
         }
+      })
+      .catch((err) => {
+        console.error(`Failed to load price history for ${symbol}`, err);
       })
       .finally(() => {
         if (latestHistoryRequestId.current === requestId && selectedSymbol.current === symbol) {
