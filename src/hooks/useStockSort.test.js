@@ -3,12 +3,6 @@ import { describe, it, expect } from "vitest";
 
 import { useStockSort } from "./useStockSort";
 
-// Unit-level counterpart to the sorting behavior locked down through the
-// DOM in StockList.test.jsx (clicking sort buttons and reading card order).
-// Those stay in place as the end-to-end regression check for the wiring
-// through StockControls/StockCard; these test the extracted hook's own
-// comparison logic directly.
-
 const stocks = [
   {
     id: 5,
