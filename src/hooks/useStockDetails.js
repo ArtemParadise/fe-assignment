@@ -5,14 +5,15 @@ import { fetchStockDetails, fetchHistoricalPrices } from "../utils/mockStockApi"
 export function useStockDetails() {
   const [stockDetails, setStockDetails] = useState(null);
   const [loading, setLoading] = useState(false);
-  const latestDetailsRequest = useRef(null);
+  const latestDetailsRequestId = useRef(0);
 
   const viewStockDetails = (symbol) => {
-    latestDetailsRequest.current = symbol;
+    const requestId = ++latestDetailsRequestId.current;
+
     setLoading(true);
     fetchStockDetails(symbol)
       .then((data) => {
-        if (latestDetailsRequest.current === symbol) {
+        if (latestDetailsRequestId.current === requestId) {
           setStockDetails(data);
         }
       })
@@ -21,7 +22,7 @@ export function useStockDetails() {
         console.log(err);
       })
       .finally(() => {
-        if (latestDetailsRequest.current === symbol) {
+        if (latestDetailsRequestId.current === requestId) {
           setLoading(false);
         }
       });

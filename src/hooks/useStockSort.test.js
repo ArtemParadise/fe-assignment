@@ -1,5 +1,5 @@
 import { renderHook, act } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 import { useStockSort } from "./useStockSort";
 
@@ -95,17 +95,33 @@ describe("useStockSort", () => {
     expect(symbols(result.current.sortedStocks)).toEqual(["TSLA", "AAPL", "NVDA"]);
   });
 
-  it("should throw when sorting by average price before every stock's metrics have loaded (known critical bug #1)", () => {
-    // React logs this render-phase error to console.error since nothing
-    // here catches it with an error boundary; silence that expected noise.
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
+  it("should not throw and should keep original order when sorting by average price before any metrics have loaded (fixes critical bug #1)", () => {
     const { result } = renderHook(() => useStockSort(stocks, {}));
 
-    expect(() => act(() => result.current.handleSort("metrics"))).toThrow(
-      /reading 'avgPrice'/,
-    );
+    act(() => result.current.handleSort("metrics"));
 
-    errorSpy.mockRestore();
+    expect(symbols(result.current.sortedStocks)).toEqual(["TSLA", "AAPL", "NVDA"]);
+  });
+
+  it("should sort stocks with loaded metrics first and push stocks with missing metrics to the end, in both directions", () => {
+    const stockMetrics = {
+      5: { avgPrice: 10 }, // TSLA
+      7: { avgPrice: 30 }, // NVDA
+      // AAPL (id 1) metrics not loaded yet
+    };
+
+    const { result } = renderHook(() => useStockSort(stocks, stockMetrics));
+
+    act(() => result.current.handleSort("metrics"));
+    expect(symbols(result.current.sortedStocks)).toEqual(["TSLA", "NVDA", "AAPL"]);
+
+    act(() => result.current.handleSort("metrics"));
+    expect(symbols(result.current.sortedStocks)).toEqual(["NVDA", "TSLA", "AAPL"]);
+  });
+
+  it("should return an empty sortedStocks list when given an empty stock list", () => {
+    const { result } = renderHook(() => useStockSort([], {}));
+
+    expect(result.current.sortedStocks).toEqual([]);
   });
 });

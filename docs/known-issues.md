@@ -4,9 +4,16 @@ Everything here was either observed directly while driving the running app in a 
 
 Ordered roughly by impact.
 
-## 1. Critical — Sorting by "Avg Price" before data loads crashes the app
+## 1. Critical — ~~Sorting by "Avg Price" before data loads crashes the app~~ (Fixed)
 
-**Where:** `src/components/StockList.jsx:76-78` (the `"metrics"` branch of `sortStocks`)
+**Where:** `src/hooks/useStockSort.js` (the `"metrics"` branch of the sort comparator)
+
+**Status: Fixed.** The comparator now reads `stockMetrics[a.id]?.avgPrice` / `stockMetrics[b.id]?.avgPrice` instead of assuming the entry exists, and applies an explicit policy for stocks whose metrics haven't loaded yet: they always sort to the end of the list, regardless of the current ascending/descending direction, rather than throwing. This mirrors the existing "Loading..." placeholder `StockCard` already shows for a missing `avgPrice`. Covered by `useStockSort.test.js > should not throw and should keep original order when sorting by average price before any metrics have loaded (fixes critical bug #1)`, `> should sort stocks with loaded metrics first and push stocks with missing metrics to the end, in both directions`, and the equivalent DOM-level test in `StockList.test.jsx > sorting > should not throw and should keep original order when sorting by average price before any metrics have loaded (fixes critical bug #1)`.
+
+<details>
+<summary>Original report</summary>
+
+**Where:** `src/components/StockList.jsx:76-78` (the `"metrics"` branch of `sortStocks`, before sorting was extracted into `useStockSort`)
 
 ```js
 } else if (sortBy === "metrics") {
@@ -29,6 +36,8 @@ TypeError: Cannot read properties of undefined (reading 'avgPrice')
 There is no error boundary anywhere in the tree (`App` or `StockList`), so React unmounts the whole component tree and the page goes blank — not just the grid, the entire app, including the search box and header.
 
 ![Blank page after the crash](./assets/avgprice-sort-crash.png)
+
+</details>
 
 ## 2. High — ~~News panel can get permanently stuck on "Loading news…"~~ (Fixed)
 
@@ -283,3 +292,24 @@ Selecting a suggestion updates the input and reports the value via `onSearch`, b
 ```
 
 `sortBy` is only ever set by `handleSort`, which is only ever called from the six sort buttons rendered in the controls bar (Symbol, Price, Change, Volume, Sector, Avg Price) — none of them pass `"name"`. This branch can't be reached through the UI at all; it's the same flavor of dead code as the unused `showTimer`/`selectedStock` state already noted in issue #9, just in `StockList` instead of `App`.
+
+## 21. Low — ~~`formatVolumeInMillions` renders `NaNM`, or silently shows `null` volume as `0.0M`~~ (Fixed)
+
+**Where:** `src/utils/formatters.js` (`formatVolumeInMillions`), `src/components/StockCard.jsx:58`, `src/components/StockDetailsPanel.jsx:15`
+
+**Status: Fixed.** `formatVolumeInMillions` is now a pure numeric conversion: it rejects any `volume` that isn't a finite `number` (covers `undefined`, `null`, non-numeric values, `NaN`, and `Infinity`) and returns `null` instead of dividing it, or the volume in millions as a plain `number` otherwise. Display formatting (decimal places, the `M` suffix, and an `"N/A"` fallback for `null`) now lives in a separate `formatVolumeLabel` helper. Both call sites used to append a literal `M` after `formatVolumeInMillions`'s return value in JSX, which would have turned an `"N/A"`-style fallback into `"N/AM"`; `StockCard` and `StockDetailsPanel` now call `formatVolumeLabel` directly instead, so missing/invalid volume renders a plain `"N/A"`. Covered by `formatters.test.js`'s cases for both functions.
+
+<details>
+<summary>Original report</summary>
+
+**Where:** `src/utils/formatters.js:1-3`, consumed by `src/components/StockCard.jsx:58` (`stock.volume`) and `src/components/StockDetailsPanel.jsx:15` (`details.volume`)
+
+```js
+export function formatVolumeInMillions(volume, decimals = 1) {
+  return (volume / 1000000).toFixed(decimals);
+}
+```
+
+Two distinct symptoms from the same missing validation: an `undefined` or non-numeric `volume` divides to `NaN`, and `toFixed` on `NaN` returns the string `"NaN"`, which both call sites render as `"NaNM"` (they append the `M` suffix literally in JSX). Separately, a `null` volume divides to `0` via JS's implicit coercion, so it silently formats as `"0.0"` — indistinguishable from a stock whose volume is genuinely zero, rather than one whose volume is simply missing.
+
+</details>

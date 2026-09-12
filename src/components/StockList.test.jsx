@@ -245,22 +245,16 @@ describe("StockList", () => {
       expect(getCardTitles()).toEqual(["TSLA", "AAPL", "NVDA"]);
     });
 
-    it("should throw when sorting by average price before every stock's metrics have loaded (known critical bug #1)", async () => {
-      // React logs this render-phase error to console.error since nothing
-      // here catches it with an error boundary; silence that expected noise.
-      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
+    it("should not throw and should keep original order when sorting by average price before any metrics have loaded (fixes critical bug #1)", async () => {
       fetchHistoricalPrices.mockReturnValue(new Promise(() => {}));
 
       const user = userEvent.setup();
 
       await renderStockList();
 
-      await expect(
-        user.click(screen.getByRole("button", { name: /^Avg Price/ })),
-      ).rejects.toThrow(/reading 'avgPrice'/);
+      await user.click(screen.getByRole("button", { name: /^Avg Price/ }));
 
-      errorSpy.mockRestore();
+      expect(getCardTitles()).toEqual(["TSLA", "AAPL", "NVDA"]);
     });
   });
 

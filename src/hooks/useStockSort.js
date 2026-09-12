@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { SORT_FIELDS, SORT_COMPARATORS } from "../constants/sorting";
+import { compareByAveragePrice } from "../utils/sorting";
 
 export function useStockSort(stocks, stockMetrics) {
   const [sortBy, setSortBy] = useState(SORT_FIELDS.SYMBOL);
@@ -16,10 +17,11 @@ export function useStockSort(stocks, stockMetrics) {
   };
 
   const sortedStocks = [...stocks].sort((a, b) => {
-    const comparison =
-      sortBy === SORT_FIELDS.METRICS
-        ? stockMetrics[a.id].avgPrice - stockMetrics[b.id].avgPrice
-        : (SORT_COMPARATORS[sortBy]?.(a, b) ?? 0);
+    if (sortBy === SORT_FIELDS.METRICS) {
+      return compareByAveragePrice({ a, b, stockMetrics, sortOrder });
+    }
+
+    const comparison = SORT_COMPARATORS[sortBy]?.(a, b) ?? 0;
 
     return sortOrder === "asc" ? comparison : -comparison;
   });
