@@ -1,4 +1,4 @@
-import { render, screen, within, waitFor } from "@testing-library/react";
+import { act, render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -76,6 +76,20 @@ function cardFor(symbol) {
   return screen.getByRole("heading", { level: 3, name: symbol }).closest(".user-card");
 }
 
+// StockList always kicks off fetchHistoricalPrices for every stock on mount
+// (via useStockMetrics), and that mocked promise resolves on a later
+// microtask than a synchronous test body. Flushing it under act() here keeps
+// that resulting setState from being reported as an unwrapped update.
+async function renderStockList({ searchTerm = "" } = {}) {
+  const utils = render(<StockList stocks={stocks} searchTerm={searchTerm} />);
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  return utils;
+}
+
 describe("StockList", () => {
   beforeEach(() => {
     fetchStockDetails.mockReset().mockResolvedValue(aaplDetails);
@@ -86,27 +100,27 @@ describe("StockList", () => {
   });
 
   describe("rendering the stock grid", () => {
-    it("should render one card per stock", () => {
-      render(<StockList stocks={stocks} searchTerm="" />);
+    it("should render one card per stock", async () => {
+      await renderStockList();
 
       expect(getCardTitles()).toHaveLength(3);
     });
 
-    it("should show the running count of currently visible stocks in the heading", () => {
-      render(<StockList stocks={stocks} searchTerm="" />);
+    it("should show the running count of currently visible stocks in the heading", async () => {
+      await renderStockList();
 
       expect(screen.getByText("Stocks (3)")).toBeInTheDocument();
     });
 
-    it("should sort by symbol ascending by default, regardless of input order", () => {
-      render(<StockList stocks={stocks} searchTerm="" />);
+    it("should sort by symbol ascending by default, regardless of input order", async () => {
+      await renderStockList();
 
       expect(getCardTitles()).toEqual(["AAPL", "NVDA", "TSLA"]);
     });
 
-    it("should show 'Loading...' for average price until historical prices resolve", () => {
+    it("should show 'Loading...' for average price until historical prices resolve", async () => {
       fetchHistoricalPrices.mockReturnValue(new Promise(() => {}));
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       expect(within(cardFor("AAPL")).getByText("Avg: Loading...")).toBeInTheDocument();
     });
@@ -116,7 +130,7 @@ describe("StockList", () => {
         { date: "2026-01-01", price: "100.00" },
         { date: "2026-01-02", price: "200.00" },
       ]);
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       expect(
         await within(cardFor("AAPL")).findByText("Avg: 150.00"),
@@ -125,26 +139,26 @@ describe("StockList", () => {
   });
 
   describe("filtering by search term", () => {
-    it("should show only stocks whose symbol matches the search term", () => {
-      render(<StockList stocks={stocks} searchTerm="AAPL" />);
+    it("should show only stocks whose symbol matches the search term", async () => {
+      await renderStockList({ searchTerm: "AAPL" });
 
       expect(getCardTitles()).toEqual(["AAPL"]);
     });
 
-    it("should show only stocks whose name matches the search term, case-insensitively", () => {
-      render(<StockList stocks={stocks} searchTerm="tesla" />);
+    it("should show only stocks whose name matches the search term, case-insensitively", async () => {
+      await renderStockList({ searchTerm: "tesla" });
 
       expect(getCardTitles()).toEqual(["TSLA"]);
     });
 
-    it("should show every stock when the search term is empty", () => {
-      render(<StockList stocks={stocks} searchTerm="" />);
+    it("should show every stock when the search term is empty", async () => {
+      await renderStockList();
 
       expect(getCardTitles()).toHaveLength(3);
     });
 
-    it("should show zero stocks and 'Stocks (0)' when nothing matches", () => {
-      render(<StockList stocks={stocks} searchTerm="doesnotexist" />);
+    it("should show zero stocks and 'Stocks (0)' when nothing matches", async () => {
+      await renderStockList({ searchTerm: "doesnotexist" });
 
       expect(screen.getByText("Stocks (0)")).toBeInTheDocument();
       expect(getCardTitles()).toHaveLength(0);
@@ -165,7 +179,7 @@ describe("StockList", () => {
       async (field, ascending, descending) => {
         const user = userEvent.setup();
 
-        render(<StockList stocks={stocks} searchTerm="" />);
+        await renderStockList();
 
         await user.click(screen.getByRole("button", { name: new RegExp(`^${field}`) }));
         expect(getCardTitles()).toEqual(ascending);
@@ -178,7 +192,7 @@ describe("StockList", () => {
     it("should sort by symbol descending on the first click, since symbol-ascending is already the default sort", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
       expect(getCardTitles()).toEqual(["AAPL", "NVDA", "TSLA"]); // default
 
       await user.click(screen.getByRole("button", { name: /^Symbol/ }));
@@ -191,7 +205,7 @@ describe("StockList", () => {
     it("should show an ascending arrow on the active sort button, and switch to descending on a second click", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(screen.getByRole("button", { name: /^Price/ }));
       expect(screen.getByRole("button", { name: /^Price/ })).toHaveTextContent("↑");
@@ -203,7 +217,7 @@ describe("StockList", () => {
     it("should reset to ascending order when switching the sort field", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(screen.getByRole("button", { name: /^Price/ }));
       await user.click(screen.getByRole("button", { name: /^Price/ })); // now descending
@@ -221,7 +235,7 @@ describe("StockList", () => {
 
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
       await waitFor(() =>
         expect(within(cardFor("NVDA")).getByText("Avg: 30.00")).toBeInTheDocument(),
       );
@@ -236,7 +250,7 @@ describe("StockList", () => {
 
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(screen.getByRole("button", { name: /^Avg Price/ }));
 
@@ -248,7 +262,7 @@ describe("StockList", () => {
     it("should show only stocks in the selected sector", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.selectOptions(screen.getByRole("combobox"), "Automotive");
 
@@ -258,7 +272,7 @@ describe("StockList", () => {
     it("should combine the sector filter with the search term filter", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="a" />);
+      await renderStockList({ searchTerm: "a" });
 
       await user.selectOptions(screen.getByRole("combobox"), "Technology");
 
@@ -268,7 +282,7 @@ describe("StockList", () => {
     it("should show every stock again when 'All Sectors' is reselected", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.selectOptions(screen.getByRole("combobox"), "Automotive");
       await user.selectOptions(screen.getByRole("combobox"), "All Sectors");
@@ -276,8 +290,8 @@ describe("StockList", () => {
       expect(getCardTitles()).toHaveLength(3);
     });
 
-    it("should keep listing a sector's option even once search text filters all its stocks out (existing behavior)", () => {
-      render(<StockList stocks={stocks} searchTerm="tesla" />);
+    it("should keep listing a sector's option even once search text filters all its stocks out (existing behavior)", async () => {
+      await renderStockList({ searchTerm: "tesla" });
 
       const options = within(screen.getByRole("combobox")).getAllByRole("option");
 
@@ -288,8 +302,8 @@ describe("StockList", () => {
   });
 
   describe("watchlist", () => {
-    it("should render an empty star for every stock by default", () => {
-      render(<StockList stocks={stocks} searchTerm="" />);
+    it("should render an empty star for every stock by default", async () => {
+      await renderStockList();
 
       expect(screen.getAllByRole("button", { name: /^Add .* to watchlist$/ })).toHaveLength(3);
     });
@@ -297,7 +311,7 @@ describe("StockList", () => {
     it("should switch a stock's star to filled when toggled on", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Add AAPL to watchlist" }));
 
@@ -307,7 +321,7 @@ describe("StockList", () => {
     it("should switch the star back to empty when toggled off again", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       const star = () =>
         within(cardFor("AAPL")).getByRole("button", { name: /watchlist$/ });
@@ -321,7 +335,7 @@ describe("StockList", () => {
     it("should not affect any other stock's star", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Add AAPL to watchlist" }));
 
@@ -332,7 +346,7 @@ describe("StockList", () => {
     it("should add a 'favorite' class to a watchlisted card", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Add AAPL to watchlist" }));
 
@@ -342,7 +356,7 @@ describe("StockList", () => {
     it("should bold the change percentage on a watchlisted card", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Add AAPL to watchlist" }));
 
@@ -354,7 +368,7 @@ describe("StockList", () => {
     it("should not persist the watchlist to localStorage (known issue #3, despite README claiming it does)", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Add AAPL to watchlist" }));
 
@@ -366,7 +380,7 @@ describe("StockList", () => {
     it("should request details for the clicked stock's symbol", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "View Details" }));
 
@@ -378,7 +392,7 @@ describe("StockList", () => {
 
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "View Details" }));
 
@@ -388,7 +402,7 @@ describe("StockList", () => {
     it("should hide the loading indicator once details resolve", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "View Details" }));
       await screen.findByText("Stock Details - AAPL");
@@ -406,7 +420,7 @@ describe("StockList", () => {
 
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       // User clicks AAPL, then quickly clicks NVDA before AAPL's slower
       // response has arrived.
@@ -435,7 +449,7 @@ describe("StockList", () => {
 
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "View Details" }));
 
@@ -453,7 +467,7 @@ describe("StockList", () => {
 
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "View Details" }));
       await screen.findByText("Stock Details - AAPL");
@@ -473,7 +487,7 @@ describe("StockList", () => {
     it("should switch the button label to 'Hide News' once expanded", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       const card = cardFor("AAPL");
 
@@ -485,7 +499,7 @@ describe("StockList", () => {
     it("should collapse the panel when 'Hide News' is clicked on an already-expanded stock", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       const card = cardFor("AAPL");
 
@@ -499,7 +513,7 @@ describe("StockList", () => {
     it("should not re-fetch news when collapsing an already-expanded stock", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       const card = cardFor("AAPL");
 
@@ -513,7 +527,7 @@ describe("StockList", () => {
     it("should request news for the clicked stock's symbol", async () => {
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Show News" }));
 
@@ -525,7 +539,7 @@ describe("StockList", () => {
 
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Show News" }));
 
@@ -543,7 +557,7 @@ describe("StockList", () => {
 
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       const card = cardFor("AAPL");
 
@@ -567,7 +581,7 @@ describe("StockList", () => {
 
       const user = userEvent.setup();
 
-      render(<StockList stocks={stocks} searchTerm="" />);
+      await renderStockList();
 
       await user.click(within(cardFor("AAPL")).getByRole("button", { name: "Show News" }));
       await within(cardFor("AAPL")).findByText("AAPL headline");
