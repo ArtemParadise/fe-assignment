@@ -40,10 +40,10 @@ I wrote this before touching any code. It changed along the way, and I didn't fi
 
 **4. Issues audit fix**
 - [x] Audit issues and improvements
-- [x] Improve ESLint rules where needed
+- [ ] Improve ESLint rules where needed
 - [x] Review and validate, iterate
 
-The unchecked items in step 3 are the deliberate part. More on that below.
+The unchecked items in step 3 and 4 are the deliberate part. More on that below.
 
 ## What I found
 
