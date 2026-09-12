@@ -112,13 +112,29 @@ Every click on "View Details" started a new `fetchStockDetails` call; the effect
 
 The function ignores the actual stock record and generates entirely new random numbers, only echoing the `symbol`/a derived name. Example captured live for AAPL: summary card showed price `$178.52` / change `+2.30%`; the details panel opened moments later showed price `$302.60` / change `1.83%` / company "AAPL Corporation" (vs. "Apple Inc." on the card). This is a property of the mock data generator rather than a rendering bug, but it means no number in the details panel can currently be cross-checked against the card that opened it.
 
-## 6. Medium — Non-responsive layout causes horizontal page scroll on narrow viewports
+## 6. Medium — ~~Non-responsive layout causes horizontal page scroll on narrow viewports~~ (Fixed)
+
+**Where:** `src/App.css` (`.sort-controls`)
+
+**Status: Fixed.** `.sort-controls` (shared with `.filter-controls`) now has `flex-wrap: wrap` alongside its existing `gap: 10px`, so the six sort buttons wrap onto additional lines instead of forcing the row wider than its container. Verified live at a 400px viewport: `document.documentElement.scrollWidth` now equals `clientWidth` (385px both), down from the previously measured 528px/385px (a 143px overflow).
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/App.css` — `.controls` / `.sort-controls` (`~lines 85-108`)
 
 At a 400px viewport, `document.documentElement.scrollWidth` measures 528px against a `clientWidth` of 385px — a 143px horizontal overflow, caused by the six sort buttons not wrapping within the available width. Visible in [`assets/mobile-overflow.png`](./assets/mobile-overflow.png).
 
-## 7. Low — Large blank gap on every stock card
+</details>
+
+## 7. Low — ~~Large blank gap on every stock card~~ (Fixed)
+
+**Where:** `src/App.css` (`.stock-name`)
+
+**Status: Fixed.** `margin: 88px 0` is now `margin: 8px 0`, matching the scale of every other small vertical spacing rule in the file (e.g. `.stock-sector`'s `margin: 8px 0`). Verified live: the company name now sits directly above the price with no stray gap.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/App.css:177-185`
 
@@ -131,6 +147,8 @@ At a 400px viewport, `document.documentElement.scrollWidth` measures 528px again
 ```
 
 `margin: 88px 0` on `.stock-name` (the company name line, e.g. "Apple Inc.") pushes a large empty gap before the price on every card, visible in every screenshot in [features.md](./features.md). Looks like a stray/leftover value rather than an intentional design choice, given nothing else in the stylesheet uses spacing anywhere near that scale.
+
+</details>
 
 ## 8. Low — ~~Missing `key` prop on sector `<option>` elements~~ (Fixed)
 
@@ -198,17 +216,35 @@ Using the array index as the React key for a reorderable/filterable list is a st
 
 </details>
 
-## 12. Low — Low-contrast text in the details panel
+## 12. Low — ~~Low-contrast text in the details panel~~ (Fixed)
+
+**Where:** `src/App.css` (`.user-details p`)
+
+**Status: Fixed.** The two separate, overlapping `.user-details p` rules have been merged into one: `color` is now `#495057` (was `#999`) against the panel's `#e9ecef` background, and the redundant second rule (which only re-declared `margin`) has been deleted. Verified live: the details-panel text is now clearly legible instead of washed out.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/App.css:254-260` and `src/App.css:312-314` (two separate, overlapping `.user-details p` rules)
 
 Details-panel paragraphs render in `#999` at `11px` on a `#e9ecef` background — visibly hard to read in [`assets/details-and-news-stuck.png`](./assets/details-and-news-stuck.png). The two `.user-details p` rules (lines 254-260 and 312-314) also partially conflict: the later one in the file wins for `margin`, the earlier one wins for `color`/`font-size`/`margin-bottom` (which the later rule doesn't redeclare) — functional today only because of CSS cascade order, not because it's written to be.
 
-## 13. Cosmetic — Missing favicon (404 on load)
+</details>
+
+## 13. Cosmetic — ~~Missing favicon (404 on load)~~ (Fixed)
+
+**Where:** `index.html:5`, `public/vite.svg`
+
+**Status: Fixed.** Added `public/vite.svg` (a small dark rounded-square icon with a green upward-trend glyph, fitting the dashboard's theme) so the existing `<link rel="icon" href="/vite.svg">` reference resolves. Verified live: no more 404 in the console on page load.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `index.html:5` references `/vite.svg`; there is no `public/` directory in the project and no `vite.svg` anywhere in the repo.
 
 Produces a `404` in the console on every page load. No functional impact.
+
+</details>
 
 ## 14. Low — ~~User-triggered fetches modeled as state + effect instead of event handlers~~ (Fixed)
 
@@ -376,7 +412,14 @@ Two distinct symptoms from the same missing validation: an `undefined` or non-nu
 
 </details>
 
-## 22. Cosmetic — Volume and Avg Price run together with no spacing on the stock card
+## 22. Cosmetic — ~~Volume and Avg Price run together with no spacing on the stock card~~ (Fixed)
+
+**Where:** `src/App.css` (`.user-stats`)
+
+**Status: Fixed.** `.user-stats` is now `display: flex` with `justify-content: space-between`, `flex-wrap: wrap` and `gap: 4px`, spreading the two `<small>` children apart (and wrapping instead of overlapping if a card is ever narrow enough that they don't fit on one line). Verified live: renders as "Volume: 7.0M" and "Avg: 192.91" as two clearly separated stats.
+
+<details>
+<summary>Original report</summary>
 
 **Where:** `src/components/StockCard.jsx:58-59` (the two `<small>` elements) and `src/App.css:205-214` (`.user-stats`)
 
@@ -388,6 +431,8 @@ Two distinct symptoms from the same missing validation: an `undefined` or non-nu
 ```
 
 `<small>` is an inline element, and `.user-stats` sets no `display`/`gap`/margin between its children, so the two lines butt up against each other with no separator — rendering as e.g. `Volume: 7.0MAvg: 192.91` instead of two visually distinct stats. Confirmed live in the running app.
+
+</details>
 
 ## 23. Low — ~~`SearchBar`'s suggestions dropdown stayed open when clicking elsewhere on the page~~ (Fixed)
 
