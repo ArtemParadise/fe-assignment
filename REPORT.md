@@ -39,7 +39,7 @@ I wrote this before touching any code. It changed along the way, and I didn't fi
 - [ ] Write a custom testing skill
 
 **4. Issues audit fix**
-- [x] Audit issues and improvements
+- [x] Fix audit issues and improvements
 - [ ] Improve ESLint rules where needed
 - [x] Review and validate, iterate
 
@@ -90,6 +90,8 @@ Then I went in deliberately, on my own judgment:
 ### CI
 
 Added a GitHub Actions workflow ([PR #7](https://github.com/ArtemParadise/fe-assignment/pull/7)): lint, tests, and build on every PR. Husky runs lint-staged on pre-commit and the full suite on pre-push, so the same gates apply locally.
+
+Automated checks don't catch everything, so I also ran the app by hand on every PR, not just at the end. That way a regression surfaced right next to the change that caused it, instead of turning up later as "something's broken" with the whole codebase to search through to find out what.
 
 ### A second pass over my own work
 
@@ -163,7 +165,7 @@ What's still open, after both passes:
 - **The details panel's numbers don't match the card** ([#5](./docs/known-issues.md#issue-5-details-panel-values-are-unrelated-to-the-summary-card-for-the-same-symbol)). `fetchStockDetails` generates fresh random values instead of looking anything up. Fixing it means rewriting the fake data source rather than the app, so I documented it and left it.
 - **Search doesn't match on sector**, which surprises people who type "tech". That's existing behaviour, and changing it would be a feature decision, not a refactor.
 
-At real scale — a live API instead of a mock, hundreds of rows instead of ten — the next steps would be different in kind: a data layer with request deduplication and caching (the same `fetchHistoricalPrices(symbol)` is currently called twice for the same symbol from two different places), memoisation driven by actual profiling, and list virtualisation. I deliberately didn't do any of that here. With 10 stocks and an in-memory mock, adding it would be cargo cult — there is currently no `useMemo`, `useCallback`, or `memo` anywhere in the codebase, and at this size that's the correct answer, not an oversight.
+At real scale — a live API instead of a mock, hundreds of rows instead of ten — the next steps would be different in kind: a data layer with request deduplication and caching (the same `fetchHistoricalPrices(symbol)` is currently called twice for the same symbol from two different places), memoisation driven by actual profiling, and list virtualisation. I deliberately didn't do any of that here. With 10 stocks and an in-memory mock, adding it would be cargo cult — there is currently no `useMemo`, `useCallback`, or `memo` anywhere in the codebase, and at this size I consider that as the suitable approach, rather than an oversight.
 
 ## Where things stand
 
