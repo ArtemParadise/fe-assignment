@@ -97,7 +97,7 @@ Automated checks don't catch everything, so I also ran the app by hand on every 
 
 When the refactoring settled, I audited the result instead of calling it done. Nine more issues, [#24–#32](./docs/known-issues.md) — eight fixed, one left alone on purpose. They fell into two patterns.
 
-**Error handling was the real gap.** Three fetches chained `.then()` with no `.catch()`, so a failure meant an unhandled rejection plus a loading message that never cleared — the exact shape I'd fixed for `fetchStockDetails` under #17 and hadn't gone looking for elsewhere. All three catch and log now. There was also no error boundary anywhere, which is why #1 was Critical rather than merely broken: React unmounts the whole tree on an uncaught render error. The app is wrapped in one now, so a render error costs a message and a reload button instead of a blank page.
+**Error handling was the real gap.** Three fetches chained `.then()` with no `.catch()`, so a failure meant an unhandled rejection plus a loading message that never cleared — the exact shape I'd fixed for `fetchStockDetails` under #17 and hadn't gone looking for elsewhere. All three catch and log now. There was also no error boundary anywhere, which is why #1 was Critical rather than merely broken: React unmounts the whole tree on an uncaught render error. The app is wrapped in one now, so a render error costs a message and a reload button instead of a blank page ([PR #16](https://github.com/ArtemParadise/fe-assignment/pull/16)).
 
 **Some of my own fixes had been applied in one place and missed in another.** `SearchBar` was still keying suggestions by index, which #11 fixed in `StockList`; `StockCard` was still reading an empty news list as "still loading", the other half of #2. Both fixed — and the news panel moved into its own `StockNews` component on the way, which dropped a prop and a piece of state rather than adding any. Fixing a bug isn't done until I've grepped for the same shape elsewhere.
 
@@ -131,17 +131,17 @@ Which makes the UI-visible changes the ones that need an argument. Every one of 
 
 **Details panel contrast (#12).** `#999` on an `#e9ecef` background, hard to read, plus two conflicting `.user-details p` rules that only worked because of cascade order. Merged into one rule, colour `#495057`. I considered this as a readability improvement rather than change of style.
 
-**Volume / Avg Price spacing (#22).** Two `<small>` elements ran together into one string with no gap ("Volume: 7.0MAvg: 192.91"). `display: flex` + `gap` — fixes unreadability, layout is visually mostly the same but more convenient.
+**Volume / Avg Price spacing (#22).** Two `<small>` elements ran together into one string with no gap ("Volume: 7.0MAvg: 192.91"). `display: flex` + `gap` — fixes unreadability, layout is visually mostly the same but more convenient. (This and the three CSS fixes above shipped in [PR #12](https://github.com/ArtemParadise/fe-assignment/pull/12).)
 
 **"Hide News" button (#15).** It genuinely didn't close the panel — it was a no-op. Why this is UX and not a new feature: the button was already in the UI with that label and that expected behaviour. It just didn't work. Brought it up to what it already claimed to do.
 
-**Search suggestions dropdown (#18, #19, #23).** Didn't close after picking a suggestion, after clearing the field, or when clicking outside the search. Also not new functionality — a bug in an existing search component whose behaviour was already implied, since the UI for hiding it existed and simply never fired.
+**Search suggestions dropdown (#18, #19, #23).** Didn't close after picking a suggestion, after clearing the field, or when clicking outside the search. Also not new functionality — a bug in an existing search component whose behaviour was already implied, since the UI for hiding it existed and simply never fired ([PR #10](https://github.com/ArtemParadise/fe-assignment/pull/10)).
 
 **"Show News" hanging on "Loading…" (#2).** Because of the state object mutation, the re-render wasn't guaranteed. Without the fix some users would never see content that had already loaded — I considered this as a broken use case in an existing feature.
 
-**Watchlist not persisting (#3).** The README (Original version) states persistence through localStorage outright; in fact there was none. The fix brings behaviour back in line with what was already claimed and expected — not a new feature, a correction of a documentation/reality mismatch.
+**Watchlist not persisting (#3).** The README (Original version) states persistence through localStorage outright; in fact there was none. The fix ([PR #13](https://github.com/ArtemParadise/fe-assignment/pull/13)) brings behaviour back in line with what was already claimed and expected — not a new feature, a correction of a documentation/reality mismatch.
 
-**"Load Price History" showing nothing (#16).** The button was in the UI, the request genuinely fired, but the result went only to `console.log`. For the user the button was dead. Here I gave the fetched data a minimal render (a `date: price` list) so an existing interface element would stop being a no-op. This one is on the edge of "added a feature" — my argument is that the control was already in the UI promising a result, and I just finished what the code had already started.
+**"Load Price History" showing nothing (#16).** The button was in the UI, the request genuinely fired, but the result went only to `console.log`. For the user the button was dead. Here I gave the fetched data a minimal render (a `date: price` list) so an existing interface element would stop being a no-op ([PR #13](https://github.com/ArtemParadise/fe-assignment/pull/13)). This one is on the edge of "added a feature" — my argument is that the control was already in the UI promising a result, and I just finished what the code had already started.
 
 ## Ideas I rejected
 
